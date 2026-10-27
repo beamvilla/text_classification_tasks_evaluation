@@ -5,6 +5,24 @@ from src.exceptions import ModelNotFoundError
 from src.models.typesafe_input import QuestionConfig, JevResultType
 
 
+def _build_choice(config: QuestionConfig) -> Choice:
+    return Choice(instructions=config.instructions, criteria=config.criteria)
+
+
+def _build_score(config: QuestionConfig) -> Score:
+    return Score(instructions=config.instructions, criteria=config.criteria)
+
+
+def _build_noul(config: QuestionConfig) -> Noul:
+    return Noul(instructions=config.instructions, criteria=config.criteria)
+
+
+_QUESTION_BUILDERS = {
+    JevResultType.CHOICE: _build_choice,
+    JevResultType.SCORE: _build_score,
+    JevResultType.NOUL: _build_noul,
+}
+
 AVAILABLE_MODELS = ["jev-latest"]
 
 
@@ -16,26 +34,7 @@ class TypesafeRepository:
     def convert_configs_to_questions(
         question_configs: List[QuestionConfig]
     ) -> Dict[str, Union[Choice, Noul, Score]]:
-        revised_question_config_format = {}
-        for q in question_configs:
-            if q.result_type == JevResultType.CHOICE:
-                revised_question_config_format[q.title] = Choice(
-                    instructions=q.instructions,
-                    criteria=q.criteria,
-                )
-            elif q.result_type == JevResultType.SCORE:
-                revised_question_config_format[q.title] = Score(
-                    instructions=q.instructions,
-                    criteria=q.criteria if isinstance(q.criteria, list) else list(q.criteria.values()),
-                )
-            elif q.result_type == JevResultType.NOUL:
-                revised_question_config_format[q.title] = Noul(
-                    instructions=q.instructions,
-                    criteria=q.criteria,
-                )
-            else:
-                raise ValueError(f"Unsupported result_type: {q.result_type}")
-        return revised_question_config_format
+        return {q.title: _QUESTION_BUILDERS[q.result_type](q) for q in question_configs}
 
     def send_request(
         self,

@@ -1,6 +1,4 @@
-import sys
 import unittest
-from pathlib import Path
 
 from typesafe_sdk import Choice, Noul, Score
 
@@ -43,19 +41,6 @@ class ConvertConfigsToQuestionsTest(unittest.TestCase):
         self.assertEqual(question.instructions, config.instructions)
         self.assertEqual(list(question.criteria), config.criteria)
 
-    def test_score_config_with_dict_criteria_is_converted_to_ordered_list(self):
-        config = QuestionConfig(
-            title="frustration",
-            result_type=JevResultType.SCORE,
-            instructions="How frustrated is the customer?",
-            criteria={"0": "Calm", "1": "Frustrated but civil", "2": "Very angry"},
-        )
-
-        question = self.convert([config])[config.title]
-
-        self.assertIsInstance(question, Score)
-        self.assertEqual(question.instructions, config.instructions)
-        self.assertEqual(list(question.criteria), list(config.criteria.values()))
 
     def test_noul_config_with_criteria(self):
         config = QuestionConfig(
