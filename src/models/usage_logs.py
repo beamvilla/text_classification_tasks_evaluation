@@ -6,3 +6,7 @@ class TokensUsage(BaseModel):
     input_tokens: int
     output_tokens: int
     reasoning_tokens: Optional[int] = None
+
+
+class InferenceTime(BaseModel):
+    inference_time: float
