@@ -1,26 +1,11 @@
 from typesafe_sdk import Choice, Noul, Score, TypeSafeClient, SystemOneResponse
-from pydantic import BaseModel
-from typing import Dict, List, Optional, Union
-from enum import Enum
+from typing import Dict, List, Union
 
-from exceptions.model_not_found_exception import ModelNotFoundError
+from src.exceptions import ModelNotFoundError
+from src.models.typesafe_input import QuestionConfig, JevResultType
 
 
 AVAILABLE_MODELS = ["jev-latest"]
-
-
-class JevResultType(Enum):
-    CHOICE = 1
-    SCORE = 2
-    NOUL = 3
-
-
-class QuestionConfig(BaseModel):
-    title: str
-    result_type: JevResultType
-    instructions: str
-    # choice: {label: description} | score: [description, ...] ordered from score 0 | noul: {"true": ..., "false": ...} (optional)
-    criteria: Optional[Union[Dict[str, str], List[str]]] = None
 
 
 class TypesafeRepository:

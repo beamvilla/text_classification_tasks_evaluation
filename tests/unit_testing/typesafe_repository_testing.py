@@ -4,10 +4,8 @@ from pathlib import Path
 
 from typesafe_sdk import Choice, Noul, Score
 
-# The code under test imports siblings as top-level packages (e.g. `exceptions`), so put `src/` on the path.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-
-from repositories.typesafe_repository import QuestionConfig, TypesafeRepository, JevResultType  # noqa: E402
+from src.repositories.typesafe_repository import TypesafeRepository
+from src.models.typesafe_input import QuestionConfig, JevResultType
 
 
 class ConvertConfigsToQuestionsTest(unittest.TestCase):

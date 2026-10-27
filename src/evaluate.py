@@ -4,7 +4,8 @@ load_dotenv()
 import sys
 sys.path.append("./")
 
-from src.repositories import TypesafeRepository, QuestionConfig, JevResultType
+from src.repositories import TypesafeRepository
+from src.models.typesafe_input import QuestionConfig, JevResultType
 from src.models.typesafe_output import TypesafeOutput, Answer
 from src.models.usage_logs import TokensUsage
 
