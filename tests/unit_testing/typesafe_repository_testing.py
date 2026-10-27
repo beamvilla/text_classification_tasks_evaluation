@@ -1,0 +1,117 @@
+import sys
+import unittest
+from pathlib import Path
+
+from typesafe_sdk import Choice, Noul, Score
+
+# The code under test imports siblings as top-level packages (e.g. `exceptions`), so put `src/` on the path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+
+from repositories.typesafe_repository import QuestionConfig, TypesafeRepository, JevResultTypes  # noqa: E402
+
+
+class ConvertConfigsToQuestionsTest(unittest.TestCase):
+    def convert(self, configs):
+        return TypesafeRepository.convert_configs_to_questions(configs)
+
+    def test_choice_config_becomes_choice_question(self):
+        config = QuestionConfig(
+            title="intent",
+            result_type=JevResultTypes.Choice,
+            instructions="What does the customer want?",
+            criteria={"order_status": "Asks where the order is", "other": "Anything else"},
+        )
+
+        question = self.convert([config])[config.title]
+
+        self.assertIsInstance(question, Choice)
+        self.assertEqual(question.instructions, config.instructions)
+        self.assertEqual(
+            question.criteria,
+            config.criteria,
+        )
+
+    def test_score_config_with_list_criteria_keeps_order(self):
+        config = QuestionConfig(
+            title="frustration",
+            result_type=JevResultTypes.Score,
+            instructions="How frustrated is the customer?",
+            criteria=["Calm", "Frustrated but civil", "Very angry"],
+        )
+
+        question = self.convert([config])[config.title]
+
+        self.assertIsInstance(question, Score)
+        self.assertEqual(question.instructions, config.instructions)
+        self.assertEqual(list(question.criteria), config.criteria)
+
+    def test_score_config_with_dict_criteria_is_converted_to_ordered_list(self):
+        config = QuestionConfig(
+            title="frustration",
+            result_type=JevResultTypes.Score,
+            instructions="How frustrated is the customer?",
+            criteria={"0": "Calm", "1": "Frustrated but civil", "2": "Very angry"},
+        )
+
+        question = self.convert([config])[config.title]
+
+        self.assertIsInstance(question, Score)
+        self.assertEqual(question.instructions, config.instructions)
+        self.assertEqual(list(question.criteria), list(config.criteria.values()))
+
+    def test_noul_config_with_criteria(self):
+        config = QuestionConfig(
+            title="is_urgent",
+            result_type=JevResultTypes.Noul,
+            instructions="Is the message urgent?",
+            criteria={"true": "Mentions a deadline", "false": "No time pressure"},
+        )
+
+        question = self.convert([config])[config.title]
+
+        self.assertIsInstance(question, Noul)
+        self.assertEqual(question.instructions, config.instructions)
+        self.assertEqual(question.criteria, config.criteria)
+
+    def test_noul_config_without_criteria(self):
+        config = QuestionConfig(title="is_urgent", result_type=JevResultTypes.Noul, instructions="Is the message urgent?")
+
+        question = self.convert([config])[config.title]
+
+        self.assertIsInstance(question, Noul)
+        self.assertIsNone(question.criteria)
+
+    def test_multiple_configs_are_keyed_by_title_in_input_order(self):
+        configs = [
+            QuestionConfig(
+                title="intent", 
+                result_type=JevResultTypes.Choice, 
+                instructions="i", 
+                criteria={"a": "A"}
+            ),
+            QuestionConfig(
+                title="frustration", 
+                result_type=JevResultTypes.Score, 
+                instructions="f", 
+                criteria=["low", "high"]
+            ),
+            QuestionConfig(
+                title="is_urgent", 
+                result_type=JevResultTypes.Noul, 
+                instructions="u"
+            ),
+        ]
+
+        result = self.convert(configs)
+
+        self.assertEqual(list(result), ["intent", "frustration", "is_urgent"])
+        self.assertIsInstance(result["intent"], Choice)
+        self.assertIsInstance(result["frustration"], Score)
+        self.assertIsInstance(result["is_urgent"], Noul)
+
+    def test_empty_config_list_returns_empty_dict(self):
+        self.assertEqual(self.convert([]), {})
+
+
+if __name__ == "__main__":
+    unittest.main()
