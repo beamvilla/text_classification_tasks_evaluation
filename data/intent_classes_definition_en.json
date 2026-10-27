@@ -1,0 +1,15 @@
+{
+  "intent": {
+    "type": "choice",
+    "instructions": "What does this customer message want to accomplish the most?",
+    "criteria": {
+      "order_status": "Asks where the order is, when it will arrive, or requests a tracking number or delivery status.",
+      "return_refund": "Wants to return or exchange a product, or requests a refund.",
+      "product_question": "Asks for product information before buying, such as size, stock, material, or compatibility.",
+      "payment_issue": "Reports a payment problem, such as a failed charge, a duplicate charge, a coupon that cannot be applied, or a request for a receipt or tax invoice.",
+      "account_issue": "Has a problem with login, password, profile information, address, or account settings.",
+      "complaint": "Complains or expresses dissatisfaction with the service, the shop, or the app, without asking for anything specific to be done.",
+      "other": "Does not fit any of the options above."
+    }
+  }
+}

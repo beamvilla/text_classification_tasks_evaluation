@@ -1,0 +1,10 @@
+{
+  "sentiment": {
+    "type": "choice",
+    "instructions": "What sentiment does this product review express?",
+    "criteria": {
+      "pos": "Expresses satisfaction, praise, or a recommendation for the product or service.",
+      "neg": "Expresses dissatisfaction, disappointment, or criticism of the product or service."
+    }
+  }
+}
