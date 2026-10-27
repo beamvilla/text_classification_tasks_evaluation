@@ -4,7 +4,7 @@ load_dotenv()
 import sys
 sys.path.append("./")
 
-from src.repositories import TypesafeRepository, QuestionConfig, JevResultTypes
+from src.repositories import TypesafeRepository, QuestionConfig, JevResultType
 from src.models.typesafe_output import TypesafeOutput, Answer
 from src.models.usage_logs import TokensUsage
 
@@ -16,7 +16,7 @@ response = typesafe_repository.send_request(
     question_configs=[
         QuestionConfig(
             title="department",
-            result_type=JevResultTypes.Choice,
+            result_type=JevResultType.CHOICE,
             instructions="Which team should handle this",
             criteria={
                 "billing": "Payment or subscription issues",
@@ -26,7 +26,7 @@ response = typesafe_repository.send_request(
         ),
         QuestionConfig(
             title="frustration",
-            result_type=JevResultTypes.Score,
+            result_type=JevResultType.SCORE,
             instructions="How frustrated the customer appears",
             criteria=[
                 "Calm, just stating facts",
@@ -36,7 +36,7 @@ response = typesafe_repository.send_request(
         ),
         QuestionConfig(
             title="is_urgent",
-            result_type=JevResultTypes.Noul,
+            result_type=JevResultType.NOUL,
             instructions="The message conveys urgency or time-sensitivity"
         )
     ]

@@ -6,19 +6,18 @@ from enum import Enum
 from exceptions.model_not_found_exception import ModelNotFoundError
 
 
-
 AVAILABLE_MODELS = ["jev-latest"]
 
 
-class JevResultTypes(Enum):
-    Choice = 1
-    Score = 2
-    Noul = 3
+class JevResultType(Enum):
+    CHOICE = 1
+    SCORE = 2
+    NOUL = 3
 
 
 class QuestionConfig(BaseModel):
     title: str
-    result_type: JevResultTypes
+    result_type: JevResultType
     instructions: str
     # choice: {label: description} | score: [description, ...] ordered from score 0 | noul: {"true": ..., "false": ...} (optional)
     criteria: Optional[Union[Dict[str, str], List[str]]] = None
@@ -34,17 +33,17 @@ class TypesafeRepository:
     ) -> Dict[str, Union[Choice, Noul, Score]]:
         revised_question_config_format = {}
         for q in question_configs:
-            if q.result_type == JevResultTypes.Choice:
+            if q.result_type == JevResultType.CHOICE:
                 revised_question_config_format[q.title] = Choice(
                     instructions=q.instructions,
                     criteria=q.criteria,
                 )
-            elif q.result_type == JevResultTypes.Score:
+            elif q.result_type == JevResultType.SCORE:
                 revised_question_config_format[q.title] = Score(
                     instructions=q.instructions,
                     criteria=q.criteria if isinstance(q.criteria, list) else list(q.criteria.values()),
                 )
-            elif q.result_type == JevResultTypes.Noul:
+            elif q.result_type == JevResultType.NOUL:
                 revised_question_config_format[q.title] = Noul(
                     instructions=q.instructions,
                     criteria=q.criteria,

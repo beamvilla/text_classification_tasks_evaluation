@@ -7,7 +7,7 @@ from typesafe_sdk import Choice, Noul, Score
 # The code under test imports siblings as top-level packages (e.g. `exceptions`), so put `src/` on the path.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from repositories.typesafe_repository import QuestionConfig, TypesafeRepository, JevResultTypes  # noqa: E402
+from repositories.typesafe_repository import QuestionConfig, TypesafeRepository, JevResultType  # noqa: E402
 
 
 class ConvertConfigsToQuestionsTest(unittest.TestCase):
@@ -17,7 +17,7 @@ class ConvertConfigsToQuestionsTest(unittest.TestCase):
     def test_choice_config_becomes_choice_question(self):
         config = QuestionConfig(
             title="intent",
-            result_type=JevResultTypes.Choice,
+            result_type=JevResultType.CHOICE,
             instructions="What does the customer want?",
             criteria={"order_status": "Asks where the order is", "other": "Anything else"},
         )
@@ -34,7 +34,7 @@ class ConvertConfigsToQuestionsTest(unittest.TestCase):
     def test_score_config_with_list_criteria_keeps_order(self):
         config = QuestionConfig(
             title="frustration",
-            result_type=JevResultTypes.Score,
+            result_type=JevResultType.SCORE,
             instructions="How frustrated is the customer?",
             criteria=["Calm", "Frustrated but civil", "Very angry"],
         )
@@ -48,7 +48,7 @@ class ConvertConfigsToQuestionsTest(unittest.TestCase):
     def test_score_config_with_dict_criteria_is_converted_to_ordered_list(self):
         config = QuestionConfig(
             title="frustration",
-            result_type=JevResultTypes.Score,
+            result_type=JevResultType.SCORE,
             instructions="How frustrated is the customer?",
             criteria={"0": "Calm", "1": "Frustrated but civil", "2": "Very angry"},
         )
@@ -62,7 +62,7 @@ class ConvertConfigsToQuestionsTest(unittest.TestCase):
     def test_noul_config_with_criteria(self):
         config = QuestionConfig(
             title="is_urgent",
-            result_type=JevResultTypes.Noul,
+            result_type=JevResultType.NOUL,
             instructions="Is the message urgent?",
             criteria={"true": "Mentions a deadline", "false": "No time pressure"},
         )
@@ -74,7 +74,11 @@ class ConvertConfigsToQuestionsTest(unittest.TestCase):
         self.assertEqual(question.criteria, config.criteria)
 
     def test_noul_config_without_criteria(self):
-        config = QuestionConfig(title="is_urgent", result_type=JevResultTypes.Noul, instructions="Is the message urgent?")
+        config = QuestionConfig(
+            title="is_urgent", 
+            result_type=JevResultType.NOUL, 
+            instructions="Is the message urgent?"
+        )
 
         question = self.convert([config])[config.title]
 
@@ -85,19 +89,19 @@ class ConvertConfigsToQuestionsTest(unittest.TestCase):
         configs = [
             QuestionConfig(
                 title="intent", 
-                result_type=JevResultTypes.Choice, 
+                result_type=JevResultType.CHOICE, 
                 instructions="i", 
                 criteria={"a": "A"}
             ),
             QuestionConfig(
                 title="frustration", 
-                result_type=JevResultTypes.Score, 
+                result_type=JevResultType.SCORE, 
                 instructions="f", 
                 criteria=["low", "high"]
             ),
             QuestionConfig(
                 title="is_urgent", 
-                result_type=JevResultTypes.Noul, 
+                result_type=JevResultType.NOUL, 
                 instructions="u"
             ),
         ]
