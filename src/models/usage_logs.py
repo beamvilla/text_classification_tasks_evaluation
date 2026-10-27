@@ -3,8 +3,8 @@ from typing import Optional
 
 
 class TokensUsage(BaseModel):
-    input_tokens: int
-    output_tokens: int
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
     reasoning_tokens: Optional[int] = None
 
 

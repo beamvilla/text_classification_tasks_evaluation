@@ -1,1 +1,1 @@
-from .typesafe_repository import *
+from .typesafe_repository import TypesafeRepository
