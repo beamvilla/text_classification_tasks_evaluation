@@ -4,9 +4,9 @@ from typing import Optional, Union, Dict, List
 
 
 class JevResultType(Enum):
-    CHOICE = 1
-    SCORE = 2
-    NOUL = 3
+    CHOICE = "choice"
+    SCORE = "score"
+    NOUL = "noul"
 
 
 class QuestionConfig(BaseModel):
