@@ -23,7 +23,8 @@ _QUESTION_BUILDERS = {
     JevResultType.NOUL: _build_noul,
 }
 
-AVAILABLE_MODELS = ["jev-latest"]
+DEFAULT_MODEL = "jev-latest"
+AVAILABLE_MODELS = [DEFAULT_MODEL]
 
 
 class TypesafeRepository:
@@ -40,7 +41,7 @@ class TypesafeRepository:
         self,
         ticket: str,
         question_configs: List[QuestionConfig],
-        model: str = "jev-latest"
+        model: str = DEFAULT_MODEL
     ) -> SystemOneResponse:
         if model not in AVAILABLE_MODELS:
             raise ModelNotFoundError
