@@ -220,5 +220,5 @@ __marimo__/
 .streamlit/secrets.toml
 .DS_Store
 *.whl
-# Evaluation outputs
-results/
+# Evaluation outputs: ignore everything except the runs we chose to publish
+results/*
