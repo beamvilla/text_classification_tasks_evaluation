@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.exceptions import ModelNotFoundError
 
+
 MODELS_CONFIG_PATH = "./config/models.toml"
 
 
