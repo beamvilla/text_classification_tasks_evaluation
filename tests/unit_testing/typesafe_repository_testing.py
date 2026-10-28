@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from typesafe_sdk import Choice, Noul, Score
 
@@ -164,3 +165,16 @@ class BuildQuestionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RetryConfigTest(unittest.TestCase):
+    def sent_retry_policy(self, repo):
+        with patch("src.repositories.typesafe_repository.TypeSafeClient") as client_class:
+            repo.send_request("ticket", [])
+        return client_class.call_args.kwargs["retry"]
+
+    def test_default_retry_policy(self):
+        self.assertEqual(self.sent_retry_policy(TypesafeRepository()).max_retries, 3)
+
+    def test_max_retries_is_configurable(self):
+        self.assertEqual(self.sent_retry_policy(TypesafeRepository(max_retries=0)).max_retries, 0)

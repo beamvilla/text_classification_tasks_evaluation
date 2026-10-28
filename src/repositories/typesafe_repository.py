@@ -1,4 +1,4 @@
-from typesafe_sdk import Choice, Noul, Score, TypeSafeClient, SystemOneResponse
+from typesafe_sdk import Choice, Noul, RetryPolicy, Score, TypeSafeClient, SystemOneResponse
 from typing import Dict, List, Union
 
 from src.config.model_config import load_models
@@ -24,11 +24,14 @@ _QUESTION_BUILDERS = {
 }
 
 MODELS = load_models("typesafe")
+DEFAULT_MAX_RETRIES = 3
 
 
 class TypesafeRepository:
-    def __init__(self):
-        pass
+    def __init__(self, max_retries: int = DEFAULT_MAX_RETRIES):
+        # The SDK retries connection errors, timeouts, 408, 429 and 5xx with exponential
+        # backoff (honouring Retry-After); 0 disables retrying.
+        self.__retry = RetryPolicy(max_retries=max_retries)
 
     @staticmethod
     def convert_configs_to_questions(
@@ -44,7 +47,7 @@ class TypesafeRepository:
     ) -> SystemOneResponse:
         MODELS.validate(model)
 
-        with TypeSafeClient(model=model) as client:  # Reads TYPESAFE_API_KEY.
+        with TypeSafeClient(model=model, retry=self.__retry) as client:  # Reads TYPESAFE_API_KEY.
             response = client.system_one(
                 state=ticket,
                 questions=self.convert_configs_to_questions(question_configs)

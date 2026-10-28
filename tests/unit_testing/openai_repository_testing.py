@@ -19,13 +19,21 @@ REASONING = "gpt-5-mini"
 class SendRequestTest(unittest.TestCase):
     def setUp(self):
         patcher = patch("src.repositories.openai_repository.OpenAI")
-        self.client = patcher.start().return_value
+        self.openai_class = patcher.start()
+        self.client = self.openai_class.return_value
         self.addCleanup(patcher.stop)
         self.client.responses.parse.return_value.output_parsed = Sentiment(label="pos")
         self.repo = OpenAIRepository()
 
     def sent_kwargs(self):
         return self.client.responses.parse.call_args.kwargs
+
+    def test_client_gets_default_max_retries(self):
+        self.openai_class.assert_called_once_with(max_retries=3)
+
+    def test_max_retries_is_configurable(self):
+        OpenAIRepository(max_retries=0)
+        self.assertEqual(self.openai_class.call_args.kwargs, {"max_retries": 0})
 
     def test_returns_parsed_output(self):
         result = self.repo.send_request(MESSAGES, Sentiment, model=REGULAR)

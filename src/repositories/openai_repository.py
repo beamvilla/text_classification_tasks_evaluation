@@ -10,6 +10,7 @@ from src.config.model_config import load_models
 logger = logging.getLogger(__name__)
 
 MODELS = load_models("openai")
+DEFAULT_MAX_RETRIES = 3
 
 ParsedOutputT = TypeVar("ParsedOutputT", bound=BaseModel)
 
@@ -22,8 +23,10 @@ class Message(BaseModel):
 
 
 class OpenAIRepository:
-    def __init__(self):
-        self.__client = OpenAI()  # Reads OPENAI_API_KEY.
+    def __init__(self, max_retries: int = DEFAULT_MAX_RETRIES):
+        # Reads OPENAI_API_KEY. The SDK retries connection errors, timeouts, 408, 409, 429 and 5xx
+        # with exponential backoff (honouring Retry-After); 0 disables retrying.
+        self.__client = OpenAI(max_retries=max_retries)
 
     def send_request(
         self,
