@@ -15,6 +15,19 @@ available = [
     "gpt-6-luna", "gpt-6-sol", "gpt-6-astra",
     "gpt-6.1-terra", "gpt-6.1-sol",
 ]
+# Subset of `available` that are reasoning models: they accept `reasoning.effort`
+# and reject `temperature`. Non-reasoning models are the opposite.
+# Verify against OpenAI's docs when adding a new model.
+reasoning = [
+    "gpt-5-nano", "gpt-5-mini", "gpt-5", "gpt-5-pro",
+    "gpt-5.1",
+    "gpt-5.2", "gpt-5.2-pro",
+    "gpt-5.4-nano", "gpt-5.4-mini", "gpt-5.4", "gpt-5.4-pro",
+    "gpt-5.5", "gpt-5.5-pro",
+    "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol",
+    "gpt-6-luna", "gpt-6-sol", "gpt-6-astra",
+    "gpt-6.1-terra", "gpt-6.1-sol",
+]
 
 [typesafe]
 default = "jev-latest"
