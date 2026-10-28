@@ -89,7 +89,7 @@ The cost of each run is calculated from the tokens that the provider reported an
 cost = input_tokens / 1,000,000 x input price + output_tokens / 1,000,000 x output price
 ```
 
-OpenAI bills reasoning tokens as output tokens, and they are already counted in `output_tokens`. The prices, in [`config/pricing.yaml`](config/pricing.yaml), are the ones given by the repository owner on 2026-10-28 and ignore any caching or batch discounts, so check each provider's current price list before relying on them.
+OpenAI bills reasoning tokens as output tokens, and they are already counted in `output_tokens`, so the reasoning tokens column is for information and is not costed separately. The prices, in [`config/pricing.yaml`](config/pricing.yaml), are the ones given by the repository owner on 2026-10-28 and ignore any caching or batch discounts, so check each provider's current price list before relying on them.
 
 **Prices** (USD per 1M tokens)
 
@@ -102,23 +102,23 @@ OpenAI bills reasoning tokens as output tokens, and they are already counted in 
 
 **Intent** (140 samples)
 
-| Model | Setting | Accuracy | Input tokens | Output tokens | Input cost | Output cost | Total cost | Per 1,000 samples | jev-latest is cheaper by |
+| Model | Setting | Accuracy | Input tokens | Output tokens | Reasoning tokens | Input cost | Output cost | Total cost | jev-latest is cheaper by |
 |---|---|---|---|---|---|---|---|---|---|
-| `gpt-4.1-mini` | temperature 0 | 95.0% | 71,936 | 984 | $0.0288 | $0.0016 | $0.0303 | $0.2168 | 9.4x (89.3% less) |
-| `gpt-5-mini` | minimal | 89.3% | 71,656 | 3,930 | $0.0179 | $0.0079 | $0.0258 | $0.1841 | 8.0x (87.4% less) |
-| `gpt-5-mini` | medium | 95.7% | 71,656 | 18,126 | $0.0179 | $0.0363 | $0.0542 | $0.3869 | 16.7x (94.0% less) |
-| `gpt-5` | medium | 97.1% | 71,656 | 20,920 | $0.0896 | $0.2092 | $0.2988 | $2.1341 | 92.2x (98.9% less) |
-| `jev-latest` | typesafe | 95.7% | 77,127 | 10,358 | $0.0032 | $0 | $0.0032 | $0.0231 | - |
+| `gpt-4.1-mini` | temperature 0 | 95.0% | 71,936 | 984 | 0 | $0.028774 | $0.001574 | $0.030349 | 9.4x |
+| `gpt-5-mini` | minimal | 89.3% | 71,656 | 3,930 | 0 | $0.017914 | $0.007860 | $0.025774 | 8.0x |
+| `gpt-5-mini` | medium | 95.7% | 71,656 | 18,126 | 11,520 | $0.017914 | $0.036252 | $0.054166 | 16.7x |
+| `gpt-5` | medium | 97.1% | 71,656 | 20,920 | 14,016 | $0.089570 | $0.209200 | $0.298770 | 92.2x |
+| `jev-latest` | typesafe | 95.7% | 77,127 | 10,358 | n/a | $0.003239 | $0 | $0.003239 | - |
 
 **Sentiment** (128 samples)
 
-| Model | Setting | Accuracy | Input tokens | Output tokens | Input cost | Output cost | Total cost | Per 1,000 samples | jev-latest is cheaper by |
+| Model | Setting | Accuracy | Input tokens | Output tokens | Reasoning tokens | Input cost | Output cost | Total cost | jev-latest is cheaper by |
 |---|---|---|---|---|---|---|---|---|---|
-| `gpt-4.1-mini` | temperature 0 | 100.0% | 48,172 | 896 | $0.0193 | $0.0014 | $0.0207 | $0.1617 | 10.0x (90.0% less) |
-| `gpt-5-mini` | minimal | 100.0% | 47,916 | 3,712 | $0.0120 | $0.0074 | $0.0194 | $0.1516 | 9.3x (89.3% less) |
-| `gpt-5-mini` | medium | 100.0% | 47,916 | 13,660 | $0.0120 | $0.0273 | $0.0393 | $0.3070 | 18.9x (94.7% less) |
-| `gpt-5` | medium | 100.0% | 47,916 | 16,763 | $0.0599 | $0.1676 | $0.2275 | $1.7775 | 109.5x (99.1% less) |
-| `jev-latest` | typesafe | 100.0% | 49,479 | 4,096 | $0.0021 | $0 | $0.0021 | $0.0162 | - |
+| `gpt-4.1-mini` | temperature 0 | 100.0% | 48,172 | 896 | 0 | $0.019269 | $0.001434 | $0.020702 | 10.0x |
+| `gpt-5-mini` | minimal | 100.0% | 47,916 | 3,712 | 0 | $0.011979 | $0.007424 | $0.019403 | 9.3x |
+| `gpt-5-mini` | medium | 100.0% | 47,916 | 13,660 | 8,448 | $0.011979 | $0.027320 | $0.039299 | 18.9x |
+| `gpt-5` | medium | 100.0% | 47,916 | 16,763 | 10,368 | $0.059895 | $0.167630 | $0.227525 | 109.5x |
+| `jev-latest` | typesafe | 100.0% | 49,479 | 4,096 | n/a | $0.002078 | $0 | $0.002078 | - |
 
 ### What the results show
 
@@ -126,7 +126,7 @@ OpenAI bills reasoning tokens as output tokens, and they are already counted in 
 - **On intent, the top four runs cannot be ranked.** `gpt-5` (medium) is highest at 97.1%, then `jev-latest` and `gpt-5-mini` (medium) at 95.7% and `gpt-4.1-mini` at 95.0%. That spread is 3 of 140 samples in a single run, which is within the noise of a dataset this small.
 - **Reasoning effort matters for `gpt-5-mini`.** Going from `minimal` to `medium` moves intent accuracy from 89.3% to 95.7% (9 more samples correct) at the cost of about 4.6 times the output tokens (28 to 129 per sample) and 1.5 times the time (1.42 s to 2.16 s).
 - **`jev-latest` is the fastest** at about 0.5 s per sample, with intent accuracy in the top group.
-- **Cost differs far more than accuracy.** On intent, `jev-latest` costs about $0.023 per 1,000 samples, against $0.22 for `gpt-4.1-mini` (9.4 times), $0.39 for `gpt-5-mini` (medium, 16.7 times) and $2.13 for `gpt-5` (medium, 92.2 times). `gpt-4.1-mini` (95.0%), `jev-latest` and `gpt-5-mini` (medium) (both 95.7%) are within 1 sample of each other, and `gpt-5` is 2 to 3 samples higher. About 70% of the `gpt-5` cost is output tokens, most of them reasoning tokens.
+- **Cost differs far more than accuracy.** On intent, `jev-latest` is 9.4 times cheaper than `gpt-4.1-mini`, 16.7 times cheaper than `gpt-5-mini` (medium) and 92.2 times cheaper than `gpt-5` (medium). `gpt-4.1-mini` (95.0%), `jev-latest` and `gpt-5-mini` (medium) (both 95.7%) are within 1 sample of each other, and `gpt-5` is 2 to 3 samples higher. About 70% of the `gpt-5` cost is output tokens, most of them reasoning tokens.
 
 ### How to read these numbers
 

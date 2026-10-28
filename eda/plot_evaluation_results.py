@@ -151,15 +151,14 @@ def add_costs(rows: list[dict], pricing: dict) -> None:
     for r in rows:
         price = pricing.get((r["provider"], r["model"]))
         if price is None:
-            r["input_cost"] = r["output_cost"] = r["total_cost"] = r["cost_per_1000"] = None
+            r["input_cost"] = r["output_cost"] = r["total_cost"] = None
             continue
         r["input_cost"] = r["input_tokens"] / 1_000_000 * price[0]
         r["output_cost"] = r["output_tokens"] / 1_000_000 * price[1]
         r["total_cost"] = r["input_cost"] + r["output_cost"]
-        r["cost_per_1000"] = r["total_cost"] / r["samples"] * 1000
 
 
-def usd(value, digits=4) -> str:
+def usd(value, digits=6) -> str:
     if value is None:
         return "n/a"
     return "$0" if value == 0 else f"${value:.{digits}f}"
@@ -184,20 +183,21 @@ def print_cost_tables(rows: list[dict], pricing: dict) -> None:
         print(f"| {PROVIDER_NAMES[provider]} | `{model}` | {cells[0]} | {cells[1]} |")
     for usecase in ("intent", "sentiment"):
         data = by_usecase(rows, usecase)
-        base = next((r["cost_per_1000"] for r in data if (r["provider"], r["model"]) == BASELINE), None)
+        base = next((r["total_cost"] for r in data if (r["provider"], r["model"]) == BASELINE), None)
         print(f"\n**{USECASE_TITLES[usecase]}** ({data[0]['samples']} samples)\n")
-        print("| Model | Setting | Accuracy | Input tokens | Output tokens | Input cost | Output cost | Total cost | Per 1,000 samples | jev-latest is cheaper by |")
+        print("| Model | Setting | Accuracy | Input tokens | Output tokens | Reasoning tokens | Input cost | Output cost | Total cost | jev-latest is cheaper by |")
         print("|---|---|---|---|---|---|---|---|---|---|")
         for r in data:
+            reasoning = "n/a" if r["reasoning_tokens"] is None else f"{r['reasoning_tokens']:,}"
             if (r["provider"], r["model"]) == BASELINE:
                 ratio = "-"
-            elif r["cost_per_1000"] is None or not base:
+            elif r["total_cost"] is None or not base:
                 ratio = "n/a"
             else:
-                times = r["cost_per_1000"] / base
-                ratio = f"{times:.1f}x ({1 - 1 / times:.1%} less)"
+                times = r["total_cost"] / base
+                ratio = f"{times:.1f}x"
             print(f"| `{r['model']}` | {r['setting']} | {r['accuracy']:.1%} | {r['input_tokens']:,} | {r['output_tokens']:,} | "
-                  f"{usd(r['input_cost'])} | {usd(r['output_cost'])} | {usd(r['total_cost'])} | {usd(r['cost_per_1000'])} | {ratio} |")
+                  f"{reasoning} | {usd(r['input_cost'])} | {usd(r['output_cost'])} | {usd(r['total_cost'])} | {ratio} |")
 
 
 def main() -> None:
