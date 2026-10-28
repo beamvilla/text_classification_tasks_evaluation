@@ -83,6 +83,8 @@ Macro precision and recall average the per-class scores over the classes of the 
 
 ### Cost
 
+![Cost benchmark: total cost of one evaluation run per model for intent and sentiment, with the multiple of the jev-latest cost](assets/evaluation_cost.png)
+
 The cost of each run is calculated from the tokens that the provider reported and the prices below:
 
 ```
@@ -122,8 +124,7 @@ OpenAI bills reasoning tokens as output tokens, and they are already counted in 
 
 ### What the results show
 
-- **Sentiment does not separate the models.** All five runs classify all 128 reviews correctly, so only time and cost differ.
-- **On intent, the top four runs cannot be ranked.** `gpt-5` (medium) is highest at 97.1%, then `jev-latest` and `gpt-5-mini` (medium) at 95.7% and `gpt-4.1-mini` at 95.0%. That spread is 3 of 140 samples in a single run, which is within the noise of a dataset this small.
+- The classification results are not very different across models. What differs is time and cost.
 - **Reasoning effort matters for `gpt-5-mini`.** Going from `minimal` to `medium` moves intent accuracy from 89.3% to 95.7% (9 more samples correct) at the cost of about 4.6 times the output tokens (28 to 129 per sample) and 1.5 times the time (1.42 s to 2.16 s).
 - **`jev-latest` is the fastest** at about 0.5 s per sample, with intent accuracy in the top group.
 - **Cost differs far more than accuracy.** On intent, `jev-latest` is 9.4 times cheaper than `gpt-4.1-mini`, 16.7 times cheaper than `gpt-5-mini` (medium) and 92.2 times cheaper than `gpt-5` (medium). `gpt-4.1-mini` (95.0%), `jev-latest` and `gpt-5-mini` (medium) (both 95.7%) are within 1 sample of each other, and `gpt-5` is 2 to 3 samples higher. About 70% of the `gpt-5` cost is output tokens, most of them reasoning tokens.

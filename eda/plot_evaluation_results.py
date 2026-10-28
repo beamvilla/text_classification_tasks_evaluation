@@ -3,7 +3,8 @@
 Usage (from the repository root):
     uv run --with matplotlib eda/plot_evaluation_results.py [evaluated_results/<run>]
 
-Writes assets/evaluation_accuracy_vs_time.png (same look as plot_class_distribution.py) and prints
+Writes assets/evaluation_accuracy_vs_time.png and assets/evaluation_cost.png (same look as
+plot_class_distribution.py) and prints
 the markdown tables used in README.md (accuracy / time / tokens, and cost from config/pricing.yaml).
 """
 import csv
@@ -14,7 +15,7 @@ import yaml
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch, Rectangle
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_ROOT = ROOT / "evaluated_results"
@@ -123,6 +124,62 @@ def plot_accuracy_vs_time(rows: list[dict], path: Path) -> None:
     plt.close(fig)
 
 
+# ---------------------------------------------------------------- chart: cost
+def plot_cost(rows: list[dict], path: Path) -> None:
+    """Total cost of one evaluation run per model, one panel per usecase, same x scale in both."""
+    W, H = 13, 6.8
+    fig = plt.figure(figsize=(W, H), facecolor=BG)
+    width = 0.34
+    layout = {"intent": [0.16, 0.12, width, 0.60], "sentiment": [0.58, 0.12, width, 0.60]}
+    xmax = max(r["total_cost"] for r in rows) * 1.7
+    n = len(by_usecase(rows, "intent"))
+
+    for usecase, box in layout.items():
+        ax = fig.add_axes(box)
+        data = by_usecase(rows, usecase)
+        base = next(r["total_cost"] for r in data if (r["provider"], r["model"]) == BASELINE)
+        ax.set_facecolor(BG)
+        for side in ax.spines.values():
+            side.set_visible(False)
+        ax.set_xlim(0, xmax)
+        ax.set_ylim(-0.6, n - 0.4)
+        ax.set_xticks([])
+        ax.axvline(0, color=INK, linewidth=2)
+        ax.tick_params(length=0)
+        px_x, px_y = W * box[2] / xmax, H * box[3] / (n + 0.2)  # inches per data unit
+        radius = 0.09 / px_x  # corner radius of 0.09 in, in x data units
+        for i, r in enumerate(data):
+            y = n - 1 - i
+            w = r["total_cost"]
+            color = PROVIDER_COLORS[r["provider"]]
+            if w > 2 * radius:
+                ax.add_patch(FancyBboxPatch((0, y - 0.3), w, 0.6, boxstyle=f"round,pad=0,rounding_size={radius}",
+                                            mutation_aspect=px_x / px_y, fc=color, ec=INK, lw=2))
+            else:  # too thin to round; keep the outline so it stays visible
+                ax.add_patch(Rectangle((0, y - 0.3), w, 0.6, fc=color, ec=INK, lw=2))
+            label = f"${w:.4f}" if (r["provider"], r["model"]) == BASELINE else f"${w:.4f}  ({w / base:.1f}x)"
+            ax.text(w + xmax * 0.025, y, label, va="center", fontsize=13, fontweight="bold")
+        if usecase == "intent":
+            ax.set_yticks(range(n))
+            ax.set_yticklabels([f"{r['model']}\n{r['setting']}" for r in data][::-1], fontsize=12, fontweight="bold",
+                               linespacing=1.25)
+        else:
+            ax.set_yticks([])
+        fig.text(box[0], 0.78, f"{usecase.upper()}  n={data[0]['samples']}", fontsize=13, fontweight="bold")
+
+    fig.text(0.54, 0.04, "Total cost of one evaluation run (USD); (Nx) = times the jev-latest cost",
+             fontsize=13, fontweight="bold", ha="center")
+    for j, provider in enumerate(dict.fromkeys(r["provider"] for r in rows)):
+        x = 0.68 + j * 0.13
+        fig.patches.append(FancyBboxPatch((x, 0.895), 0.022, 0.035, transform=fig.transFigure,
+                           boxstyle="round,pad=0,rounding_size=0.008", fc=PROVIDER_COLORS[provider], ec=INK, lw=2))
+        fig.text(x + 0.03, 0.912, PROVIDER_NAMES[provider], va="center", fontsize=13, fontweight="bold")
+    fig.text(0.06, 0.92, "Cost Benchmark", fontsize=28, fontweight="bold", color=RED)
+    fig.text(0.06, 0.86, "Same samples and prompts for every model: lower is cheaper", fontsize=13)
+    fig.savefig(path, dpi=150, facecolor=BG)
+    plt.close(fig)
+
+
 # ---------------------------------------------------------------- markdown tables for the README
 def print_tables(rows: list[dict]) -> None:
     for usecase in ("intent", "sentiment"):
@@ -206,11 +263,12 @@ def main() -> None:
     else:
         results_dir = sorted(p for p in RESULTS_ROOT.iterdir() if (p / "summary.csv").exists())[-1]
     rows = load_rows(results_dir)
-    plot_accuracy_vs_time(rows, ASSETS / "evaluation_accuracy_vs_time.png")
-    print(f"Read {results_dir.relative_to(ROOT)}; wrote assets/evaluation_accuracy_vs_time.png")
-    print_tables(rows)
     pricing = load_pricing()
     add_costs(rows, pricing)
+    plot_accuracy_vs_time(rows, ASSETS / "evaluation_accuracy_vs_time.png")
+    plot_cost(rows, ASSETS / "evaluation_cost.png")
+    print(f"Read {results_dir.relative_to(ROOT)}; wrote assets/evaluation_accuracy_vs_time.png and assets/evaluation_cost.png")
+    print_tables(rows)
     print_cost_tables(rows, pricing)
 
 
