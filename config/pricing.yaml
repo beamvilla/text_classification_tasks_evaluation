@@ -1,0 +1,17 @@
+# Price per 1M tokens in USD, as provided by the repository owner (2026-10-28).
+# Check the providers' current price lists before relying on these numbers.
+# A model without an entry shows as "n/a" in the cost tables of the README.
+openai:
+  gpt-4.1-mini:
+    input: 0.40
+    output: 1.60
+  gpt-5-mini:
+    input: 0.25
+    output: 2.00
+  gpt-5:
+    input: 1.25
+    output: 10.00
+typesafe:
+  jev-latest:
+    input: 0.042
+    output: 0
