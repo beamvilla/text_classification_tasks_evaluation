@@ -27,6 +27,12 @@ usecases:
       - provider: openai
         model: gpt-5-mini
         reasoning_effort: minimal   # reasoning models only; ignored for regular models
+      - provider: openai
+        model: gpt-5-mini
+        reasoning_effort: medium
+      - provider: openai
+        model: gpt-5
+        reasoning_effort: medium
       - provider: typesafe
         model: jev-latest
 
@@ -45,5 +51,11 @@ usecases:
       - provider: openai
         model: gpt-5-mini
         reasoning_effort: minimal
+      - provider: openai
+        model: gpt-5-mini
+        reasoning_effort: medium
+      - provider: openai
+        model: gpt-5
+        reasoning_effort: medium
       - provider: typesafe
         model: jev-latest
