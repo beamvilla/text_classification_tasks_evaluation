@@ -1,0 +1,49 @@
+# Evaluation settings.
+#
+#   uv run src/evaluate.py                  # run everything below
+#   uv run src/evaluate.py --dry-run        # validate this file and show the plan; no API calls
+#   uv run src/evaluate.py --config other.yaml
+#
+# Every entry under `runs` is one model + parameters to evaluate on that usecase's dataset.
+# Comment a run out to skip it. Models must be listed in config/models.toml.
+# Relative paths are resolved from the project root.
+
+output_dir: results          # each evaluation writes to results/<timestamp>/
+
+usecases:
+  intent:
+    dataset:
+      path: data/review_shopping_intent.csv
+      delimiter: ","
+      text_column: review
+      label_column: intent
+      max_samples: null      # null = all rows; a number evaluates a random subset (cheaper)
+      seed: 42               # makes the subset identical for every run
+    runs:
+      - provider: openai
+        model: gpt-4.1-mini
+        temperature: 0       # regular models only; ignored (with a warning) for reasoning models
+        max_retries: 3
+      - provider: openai
+        model: gpt-5-mini
+        reasoning_effort: minimal   # reasoning models only; ignored for regular models
+      - provider: typesafe
+        model: jev-latest
+
+  sentiment:
+    dataset:
+      path: data/review_shopping_sentiment.csv
+      delimiter: "\t"
+      text_column: review
+      label_column: label
+      max_samples: null
+      seed: 42
+    runs:
+      - provider: openai
+        model: gpt-4.1-mini
+        temperature: 0
+      - provider: openai
+        model: gpt-5-mini
+        reasoning_effort: minimal
+      - provider: typesafe
+        model: jev-latest
