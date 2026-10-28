@@ -18,3 +18,5 @@ class TaskDefinition:
 class ClassificationResult(BaseModel):
     label: str
     usage: TokensUsage
+    # Seconds the usecase waited for the classifier (includes any retries); set by the usecase.
+    inference_time: float | None = None

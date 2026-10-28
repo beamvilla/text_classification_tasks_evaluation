@@ -16,12 +16,12 @@ MAX_CONSECUTIVE_ERRORS = 5  # stop a run early (e.g. wrong API key) instead of f
 
 PREDICTION_COLUMNS = [
     "index", "text", "gold", "pred", "correct", "error",
-    "input_tokens", "output_tokens", "reasoning_tokens", "latency_s",
+    "input_tokens", "output_tokens", "reasoning_tokens", "inference_time_s",
 ]
 SUMMARY_COLUMNS = [
     "usecase", "run", "provider", "model", "temperature", "reasoning_effort", "max_retries",
     "samples", "completed", "errors", "aborted", "accuracy", "macro_f1",
-    "input_tokens", "output_tokens", "reasoning_tokens", "mean_latency_s",
+    "input_tokens", "output_tokens", "reasoning_tokens", "mean_inference_time_s",
 ]
 
 
@@ -76,18 +76,20 @@ def run_samples(usecase, samples: List[Sample], on_progress: Callable[[int, int]
     records, consecutive_errors, aborted = [], 0, False
     for i, sample in enumerate(samples, start=1):
         record = {"index": i, "text": sample.text, "gold": sample.label, "pred": None, "error": None,
-                  "input_tokens": None, "output_tokens": None, "reasoning_tokens": None}
+                  "input_tokens": None, "output_tokens": None, "reasoning_tokens": None,
+                  "inference_time_s": None}
         started = time.perf_counter()
         try:
             result = usecase.predict(sample.text)
             record.update(pred=result.label, input_tokens=result.usage.input_tokens,
                           output_tokens=result.usage.output_tokens,
-                          reasoning_tokens=result.usage.reasoning_tokens)
+                          reasoning_tokens=result.usage.reasoning_tokens,
+                          inference_time_s=round(result.inference_time, 3))
             consecutive_errors = 0
         except Exception as e:  # keep evaluating the remaining samples
             record["error"] = f"{type(e).__name__}: {e}"
             consecutive_errors += 1
-        record["latency_s"] = round(time.perf_counter() - started, 3)
+            record["inference_time_s"] = round(time.perf_counter() - started, 3)  # no result to read it from
         record["correct"] = record["pred"] == sample.label
         records.append(record)
         on_progress(i, len(samples))
@@ -112,7 +114,7 @@ def summarize(usecase_name: str, run_index: int, run: RunConfig, total: int, rec
         "input_tokens": _sum_or_none([r["input_tokens"] for r in records]),
         "output_tokens": _sum_or_none([r["output_tokens"] for r in records]),
         "reasoning_tokens": _sum_or_none([r["reasoning_tokens"] for r in records]),
-        "mean_latency_s": round(sum(r["latency_s"] for r in records) / len(records), 3) if records else None,
+        "mean_inference_time_s": round(sum(r["inference_time_s"] for r in records) / len(records), 3) if records else None,
     }
 
 

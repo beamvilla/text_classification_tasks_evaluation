@@ -113,6 +113,7 @@ class RunEvaluationTest(DatasetFileMixin, unittest.TestCase):
             self.assertAlmostEqual(rows[0]["accuracy"], 0.6667, places=3)
             self.assertEqual((rows[0]["samples"], rows[0]["completed"], rows[0]["errors"]), (3, 3, 0))
             self.assertEqual(rows[0]["input_tokens"], 30)
+            self.assertGreaterEqual(rows[0]["mean_inference_time_s"], 0)
             self.assertIsNone(rows[0]["reasoning_tokens"])
             self.assertEqual(rows[0]["temperature"], 0)
 
@@ -122,7 +123,9 @@ class RunEvaluationTest(DatasetFileMixin, unittest.TestCase):
                 self.assertEqual(len(list(csv.DictReader(f))), 2)
             predictions = next(p for p in output_dir.iterdir() if p.name.startswith("sentiment__1_openai"))
             with open(predictions, encoding="utf-8-sig", newline="") as f:
-                self.assertEqual([r["correct"] for r in csv.DictReader(f)], ["True", "True", "False"])
+                predictions_rows = list(csv.DictReader(f))
+            self.assertEqual([r["correct"] for r in predictions_rows], ["True", "True", "False"])
+            self.assertTrue(all(r["inference_time_s"] != "" for r in predictions_rows))
 
     def test_a_failed_call_is_recorded_and_the_run_continues(self):
         with tempfile.TemporaryDirectory() as out:

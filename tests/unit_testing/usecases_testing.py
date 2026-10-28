@@ -1,3 +1,4 @@
+import time
 import unittest
 from unittest.mock import MagicMock
 
@@ -48,15 +49,25 @@ class PredictTest(unittest.TestCase):
     def test_predict_delegates_to_classifier_with_task_and_text(self):
         for usecase_class, _, _ in CASES:
             with self.subTest(usecase=usecase_class.__name__):
-                expected = ClassificationResult(label="x", usage=TokensUsage())
                 classifier = MagicMock()
-                classifier.classify.return_value = expected
+                classifier.classify.return_value = ClassificationResult(label="x", usage=TokensUsage(input_tokens=3))
 
                 usecase = usecase_class(classifier)
                 result = usecase.predict("สินค้าดีมาก")
 
                 classifier.classify.assert_called_once_with(usecase.task, "สินค้าดีมาก")
-                self.assertIs(result, expected)
+                self.assertEqual((result.label, result.usage.input_tokens), ("x", 3))
+
+    def test_predict_reports_inference_time(self):
+        def slow_classify(task, text):
+            time.sleep(0.05)
+            return ClassificationResult(label="x", usage=TokensUsage())
+
+        classifier = MagicMock()
+        classifier.classify.side_effect = slow_classify
+        result = IntentClassificationUsecase(classifier).predict("text")
+        self.assertGreaterEqual(result.inference_time, 0.05)
+        self.assertLess(result.inference_time, 1.0)
 
 
 if __name__ == "__main__":
