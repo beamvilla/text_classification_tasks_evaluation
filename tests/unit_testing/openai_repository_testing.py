@@ -35,9 +35,10 @@ class SendRequestTest(unittest.TestCase):
         OpenAIRepository(max_retries=0)
         self.assertEqual(self.openai_class.call_args.kwargs, {"max_retries": 0})
 
-    def test_returns_parsed_output(self):
+    def test_returns_full_response_with_parsed_output(self):
         result = self.repo.send_request(MESSAGES, Sentiment, model=REGULAR)
-        self.assertEqual(result, Sentiment(label="pos"))
+        self.assertIs(result, self.client.responses.parse.return_value)
+        self.assertEqual(result.output_parsed, Sentiment(label="pos"))
 
     def test_regular_model_passes_temperature(self):
         self.repo.send_request(MESSAGES, Sentiment, model=REGULAR, temperature=0.0)

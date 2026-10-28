@@ -1,6 +1,7 @@
 import logging
 
 from openai import OpenAI
+from openai.types.responses import ParsedResponse
 from pydantic import BaseModel
 from typing import List, Type, TypeVar, Literal
 
@@ -35,8 +36,9 @@ class OpenAIRepository:
         model: str = MODELS.default,
         temperature: float | None = None,
         reasoning_effort: ReasoningEffort | None = None,
-    ) -> ParsedOutputT:
-        """Send `messages` and return the response parsed into `text_format`.
+    ) -> ParsedResponse[ParsedOutputT]:
+        """Send `messages` and return the full response; `.output_parsed` is an instance of `text_format`
+        and `.usage` holds the token counts.
 
         Works with both kinds of models (listed in config/models.toml):
         - reasoning models use `reasoning_effort`; `temperature` is ignored;
@@ -65,4 +67,4 @@ class OpenAIRepository:
             text_format=text_format,
             **params,
         )
-        return response.output_parsed
+        return response

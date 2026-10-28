@@ -163,9 +163,6 @@ class BuildQuestionTest(unittest.TestCase):
         self.assertIsNone(question.criteria)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class RetryConfigTest(unittest.TestCase):
     def sent_retry_policy(self, repo):
@@ -178,3 +175,7 @@ class RetryConfigTest(unittest.TestCase):
 
     def test_max_retries_is_configurable(self):
         self.assertEqual(self.sent_retry_policy(TypesafeRepository(max_retries=0)).max_retries, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
