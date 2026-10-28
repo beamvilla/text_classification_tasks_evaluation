@@ -1,7 +1,7 @@
 from typesafe_sdk import Choice, Noul, Score, TypeSafeClient, SystemOneResponse
 from typing import Dict, List, Union
 
-from src.exceptions import ModelNotFoundError
+from src.config.model_config import load_models
 from src.models.typesafe_input import QuestionConfig, JevResultType
 
 
@@ -23,8 +23,7 @@ _QUESTION_BUILDERS = {
     JevResultType.NOUL: _build_noul,
 }
 
-DEFAULT_MODEL = "jev-latest"
-AVAILABLE_MODELS = [DEFAULT_MODEL]
+MODELS = load_models("typesafe")
 
 
 class TypesafeRepository:
@@ -41,11 +40,10 @@ class TypesafeRepository:
         self,
         ticket: str,
         question_configs: List[QuestionConfig],
-        model: str = DEFAULT_MODEL
+        model: str = MODELS.default
     ) -> SystemOneResponse:
-        if model not in AVAILABLE_MODELS:
-            raise ModelNotFoundError
-        
+        MODELS.validate(model)
+
         with TypeSafeClient(model=model) as client:  # Reads TYPESAFE_API_KEY.
             response = client.system_one(
                 state=ticket,
