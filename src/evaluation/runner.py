@@ -9,7 +9,7 @@ from typing import Callable, List, Optional
 from src.classifiers.base import Classifier
 from src.config.config import PROJECT_ROOT, DatasetConfig, EvalConfig, RunConfig
 from src.evaluation.factory import USECASES, build_classifier
-from src.evaluation.metrics import accuracy, macro_f1
+from src.evaluation.metrics import accuracy, macro_precision, macro_recall
 from src.models.classification import TaskDefinition
 
 MAX_CONSECUTIVE_ERRORS = 5  # stop a run early (e.g. wrong API key) instead of failing every sample
@@ -20,7 +20,7 @@ PREDICTION_COLUMNS = [
 ]
 SUMMARY_COLUMNS = [
     "usecase", "run", "provider", "model", "temperature", "reasoning_effort", "max_retries",
-    "samples", "completed", "errors", "aborted", "accuracy", "macro_f1",
+    "samples", "completed", "errors", "aborted", "accuracy", "macro_precision", "macro_recall",
     "input_tokens", "output_tokens", "reasoning_tokens", "mean_inference_time_s",
 ]
 
@@ -110,7 +110,8 @@ def summarize(usecase_name: str, run_index: int, run: RunConfig, total: int, rec
         "samples": total, "completed": len(records),
         "errors": sum(r["error"] is not None for r in records), "aborted": aborted,
         "accuracy": round(accuracy(gold, pred), 4) if records else None,
-        "macro_f1": round(macro_f1(gold, pred), 4) if records else None,
+        "macro_precision": round(macro_precision(gold, pred), 4) if records else None,
+        "macro_recall": round(macro_recall(gold, pred), 4) if records else None,
         "input_tokens": _sum_or_none([r["input_tokens"] for r in records]),
         "output_tokens": _sum_or_none([r["output_tokens"] for r in records]),
         "reasoning_tokens": _sum_or_none([r["reasoning_tokens"] for r in records]),

@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from src.config.config import DatasetConfig, EvalConfig, OpenAIRunConfig, TypesafeRunConfig
 from src.evaluation import factory
-from src.evaluation.metrics import accuracy, macro_f1
+from src.evaluation.metrics import accuracy, macro_precision, macro_recall
 from src.evaluation.runner import (
     MAX_CONSECUTIVE_ERRORS, Sample, load_samples, run_evaluation, validate_labels,
 )
@@ -20,12 +20,26 @@ class MetricsTest(unittest.TestCase):
     def test_accuracy(self):
         self.assertEqual(accuracy(["a", "b", "a", "b"], ["a", "b", "b", "b"]), 0.75)
 
-    def test_macro_f1_is_mean_of_per_class_f1(self):
-        # class a: tp=1 fp=0 fn=1 -> 2/3 ; class b: tp=2 fp=1 fn=0 -> 4/5
-        self.assertAlmostEqual(macro_f1(["a", "a", "b", "b"], ["a", "b", "b", "b"]), (2 / 3 + 4 / 5) / 2)
+    def test_macro_precision_and_recall_average_the_per_class_scores(self):
+        gold = ["a", "a", "b", "b", "b"]
+        pred = ["a", "b", "b", "b", "a"]
+        # class a: predicted 2, correct 1 -> precision 1/2, recall 1/2
+        # class b: predicted 3, correct 2 -> precision 2/3, recall 2/3
+        self.assertAlmostEqual(macro_precision(gold, pred), (1 / 2 + 2 / 3) / 2)
+        self.assertAlmostEqual(macro_recall(gold, pred), (1 / 2 + 2 / 3) / 2)
 
-    def test_failed_prediction_is_a_miss_and_adds_no_class(self):
-        self.assertAlmostEqual(macro_f1(["a", "b"], [None, "b"]), 0.5)
+    def test_precision_and_recall_differ_when_a_class_is_over_predicted(self):
+        gold, pred = ["a", "a", "b", "b"], ["a", "a", "a", "b"]
+        self.assertAlmostEqual(macro_precision(gold, pred), (2 / 3 + 1) / 2)
+        self.assertAlmostEqual(macro_recall(gold, pred), (1 + 1 / 2) / 2)
+
+    def test_class_never_predicted_scores_zero_precision(self):
+        self.assertEqual(macro_precision(["a", "b"], ["a", "a"]), (1 / 2 + 0) / 2)
+
+    def test_failed_prediction_is_a_recall_miss_but_not_a_prediction(self):
+        gold, pred = ["a", "b"], [None, "b"]
+        self.assertEqual(macro_recall(gold, pred), 0.5)
+        self.assertEqual(macro_precision(gold, pred), 0.5)  # a: 0 predicted -> 0 ; b: 1/1
 
 
 class DatasetFileMixin:
@@ -111,6 +125,9 @@ class RunEvaluationTest(DatasetFileMixin, unittest.TestCase):
 
             self.assertEqual([r["provider"] for r in rows], ["openai", "typesafe"])
             self.assertAlmostEqual(rows[0]["accuracy"], 0.6667, places=3)
+            # gold pos,neg,neg vs pred pos,neg,pos: pos precision 1/2 recall 1; neg precision 1 recall 1/2
+            self.assertAlmostEqual(rows[0]["macro_precision"], 0.75)
+            self.assertAlmostEqual(rows[0]["macro_recall"], 0.75)
             self.assertEqual((rows[0]["samples"], rows[0]["completed"], rows[0]["errors"]), (3, 3, 0))
             self.assertEqual(rows[0]["input_tokens"], 30)
             self.assertGreaterEqual(rows[0]["mean_inference_time_s"], 0)

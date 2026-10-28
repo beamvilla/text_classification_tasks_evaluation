@@ -23,11 +23,11 @@ def main() -> None:
         return
 
     print(f"\nResults written to {output_dir}\n")
-    header = f"{'usecase':<10} {'provider:model':<28} {'acc':>6} {'macro-F1':>9} {'errors':>6} {'in_tok':>8} {'out_tok':>8}"
+    header = f"{'usecase':<10} {'provider:model':<28} {'acc':>6} {'prec':>6} {'recall':>6} {'errors':>6} {'in_tok':>8} {'out_tok':>8}"
     print(header)
     print("-" * len(header))
     for r in rows:
-        print(f"{r['usecase']:<10} {r['provider'] + ':' + r['model']:<28} {r['accuracy']!s:>6} {r['macro_f1']!s:>9} "
+        print(f"{r['usecase']:<10} {r['provider'] + ':' + r['model']:<28} {r['accuracy']!s:>6} {r['macro_precision']!s:>6} {r['macro_recall']!s:>6} "
               f"{r['errors']:>6} {r['input_tokens']!s:>8} {r['output_tokens']!s:>8}")
 
 
