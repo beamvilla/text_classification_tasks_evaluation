@@ -10,6 +10,12 @@
 
 output_dir: results          # each evaluation writes to results/<timestamp>/
 
+# The embedding server and model. Used by scripts/create_support_set_vector.py (to make the support
+# vectors) and by every `few_shot` run below, which must use the model that made its support vectors.
+embedding:
+  base_url: http://localhost:8080/v1   # any OpenAI-compatible server, e.g. text-embeddings-inference
+  model: sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+
 usecases:
   intent:
     dataset:
@@ -20,21 +26,24 @@ usecases:
       max_samples: null      # null = all rows; a number evaluates a random subset (cheaper)
       seed: 42               # makes the subset identical for every run
     runs:
-      - provider: openai
-        model: gpt-4.1-mini
-        temperature: 0       # regular models only; ignored (with a warning) for reasoning models
-        max_retries: 3
-      - provider: openai
-        model: gpt-5-mini
-        reasoning_effort: minimal   # reasoning models only; ignored for regular models
-      - provider: openai
-        model: gpt-5-mini
-        reasoning_effort: medium
-      - provider: openai
-        model: gpt-5
-        reasoning_effort: medium
-      - provider: typesafe
-        model: jev-latest
+      # - provider: openai
+      #   model: gpt-4.1-mini
+      #   temperature: 0       # regular models only; ignored (with a warning) for reasoning models
+      #   max_retries: 3
+      # - provider: openai
+      #   model: gpt-5-mini
+      #   reasoning_effort: minimal   # reasoning models only; ignored for regular models
+      # - provider: openai
+      #   model: gpt-5-mini
+      #   reasoning_effort: medium
+      # - provider: openai
+      #   model: gpt-5
+      #   reasoning_effort: medium
+      # - provider: typesafe
+      #   model: jev-latest
+      - provider: few_shot       # needs the embedding server; model and base_url come from `embedding` above
+        support_set: data/support_set_vectors/support_set_intent.json
+        top_k: 1                 # a class scores the mean of its top_k most similar support vectors
 
   sentiment:
     dataset:
@@ -45,17 +54,20 @@ usecases:
       max_samples: null
       seed: 42
     runs:
-      - provider: openai
-        model: gpt-4.1-mini
-        temperature: 0
-      - provider: openai
-        model: gpt-5-mini
-        reasoning_effort: minimal
-      - provider: openai
-        model: gpt-5-mini
-        reasoning_effort: medium
-      - provider: openai
-        model: gpt-5
-        reasoning_effort: medium
-      - provider: typesafe
-        model: jev-latest
+      # - provider: openai
+      #   model: gpt-4.1-mini
+      #   temperature: 0
+      # - provider: openai
+      #   model: gpt-5-mini
+      #   reasoning_effort: minimal
+      # - provider: openai
+      #   model: gpt-5-mini
+      #   reasoning_effort: medium
+      # - provider: openai
+      #   model: gpt-5
+      #   reasoning_effort: medium
+      # - provider: typesafe
+      #   model: jev-latest
+      - provider: few_shot
+        support_set: data/support_set_vectors/support_set_sentiment.json
+        top_k: 1

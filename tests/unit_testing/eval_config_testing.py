@@ -4,7 +4,8 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from src.config.config import DEFAULT_CONFIG_PATH, OpenAIRunConfig, load_eval_config
+from src.config.config import (DEFAULT_CONFIG_PATH, FewShotRunConfig, OpenAIRunConfig, load_embedding_config,
+                               load_eval_config)
 
 DATASET = "dataset: {path: d.csv, text_column: t, label_column: l}"
 
@@ -55,6 +56,44 @@ class LoadEvalConfigTest(unittest.TestCase):
         for text in bad_configs:
             with self.subTest(text=text), self.assertRaises(ValidationError):
                 self.load(text)
+
+    def test_project_config_has_an_embedding_section(self):
+        embedding = load_embedding_config(DEFAULT_CONFIG_PATH)
+        self.assertTrue(embedding.base_url and embedding.model)
+
+    def few_shot_config(self, run_yaml, embedding=True):
+        support = Path(tempfile.mkdtemp()) / "support.json"
+        support.write_text("{}", encoding="utf-8")
+        embedding_yaml = "embedding: {base_url: 'http://e/v1', model: m1}\n" if embedding else ""
+        return embedding_yaml + self.config_with_run(run_yaml.format(support=support)), support
+
+    def test_few_shot_run_inherits_model_and_base_url_from_the_embedding_section(self):
+        text, support = self.few_shot_config("{{provider: few_shot, support_set: {support}, top_k: 3}}")
+        run = self.load(text).usecases["intent"].runs[0]
+        self.assertIsInstance(run, FewShotRunConfig)
+        self.assertEqual((run.model, run.base_url, run.top_k, run.support_set), ("m1", "http://e/v1", 3, support))
+
+    def test_few_shot_run_can_override_the_embedding_section(self):
+        text, _ = self.few_shot_config("{{provider: few_shot, support_set: {support}, model: m2, base_url: 'http://o/v1'}}")
+        run = self.load(text).usecases["intent"].runs[0]
+        self.assertEqual((run.model, run.base_url), ("m2", "http://o/v1"))
+
+    def test_few_shot_run_without_model_or_base_url_is_rejected(self):
+        text, _ = self.few_shot_config("{{provider: few_shot, support_set: {support}}}", embedding=False)
+        with self.assertRaisesRegex(ValueError, "embedding"):
+            self.load(text)
+
+    def test_few_shot_run_with_missing_support_set_or_bad_top_k_is_rejected(self):
+        for run in ("{provider: few_shot, support_set: /nope/support.json}",
+                    "{provider: few_shot, support_set: /nope/support.json, top_k: 0}"):
+            with self.subTest(run=run), self.assertRaises(ValidationError):
+                self.load("embedding: {base_url: 'http://e/v1', model: m}\n" + self.config_with_run(run))
+
+    def test_load_embedding_config_requires_the_section(self):
+        tmp = Path(tempfile.mkdtemp()) / "c.yaml"
+        tmp.write_text("usecases: {}\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "embedding"):
+            load_embedding_config(tmp)
 
     def test_empty_file_is_rejected(self):
         with self.assertRaises(ValueError):

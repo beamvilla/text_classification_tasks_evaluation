@@ -19,7 +19,7 @@ PREDICTION_COLUMNS = [
     "input_tokens", "output_tokens", "reasoning_tokens", "inference_time_s",
 ]
 SUMMARY_COLUMNS = [
-    "usecase", "run", "provider", "model", "temperature", "reasoning_effort", "max_retries",
+    "usecase", "run", "provider", "model", "temperature", "reasoning_effort", "top_k", "max_retries",
     "samples", "completed", "errors", "aborted", "accuracy", "macro_precision", "macro_recall",
     "input_tokens", "output_tokens", "reasoning_tokens", "mean_inference_time_s",
 ]
@@ -106,6 +106,7 @@ def summarize(usecase_name: str, run_index: int, run: RunConfig, total: int, rec
         "usecase": usecase_name, "run": run_index, "provider": run.provider, "model": run.model,
         "temperature": getattr(run, "temperature", None),
         "reasoning_effort": getattr(run, "reasoning_effort", None),
+        "top_k": getattr(run, "top_k", None),
         "max_retries": run.max_retries,
         "samples": total, "completed": len(records),
         "errors": sum(r["error"] is not None for r in records), "aborted": aborted,

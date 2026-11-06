@@ -17,7 +17,7 @@ def write_support_set(directory: str, items: list[tuple[str, list[float]]], mode
     path.write_text(json.dumps({
         "model": model,
         "dimension": len(items[0][1]),
-        "items": [{"review": "x", "label": label, "embedding": vector} for label, vector in items],
+        "items": [{"review": f"{label}-{i}", "label": label, "embedding": vector} for i, (label, vector) in enumerate(items)],
     }), encoding="utf-8")
     return path
 
@@ -28,8 +28,8 @@ class FewShotLearningClassifierTests(unittest.TestCase):
         self.addCleanup(self.dir.cleanup)
         self.repository = MagicMock()
 
-    def build(self, items, model=MODEL):
-        return FewShotLearningClassifier(self.repository, write_support_set(self.dir.name, items), model)
+    def build(self, items, model=MODEL, **options):
+        return FewShotLearningClassifier(self.repository, write_support_set(self.dir.name, items), model, **options)
 
     def embed_as(self, vector):
         self.repository.get_embedding.return_value = vector
@@ -63,6 +63,27 @@ class FewShotLearningClassifierTests(unittest.TestCase):
         scores = classifier.scores("t")
         for label, vs in vectors.items():
             self.assertAlmostEqual(scores[label], max(cosine_similarity(query, v) for v in vs))
+
+    def test_top_k_scores_the_mean_of_the_k_best_vectors(self):
+        classifier = self.build([("pos", [1, 0]), ("pos", [0, 1]), ("neg", [1, 1])], top_k=2)
+        self.embed_as([1, 0])
+        scores = classifier.scores("t")
+        self.assertAlmostEqual(scores["pos"], 0.5)  # mean of 1.0 and 0.0
+        self.assertAlmostEqual(scores["neg"], 0.7071, places=3)  # only one vector: k is capped at the group size
+        self.assertEqual(classifier.classify(self.task(), "t").label, "neg")  # with top_k=1 it would be pos
+
+    def test_top_k_must_be_positive(self):
+        with self.assertRaisesRegex(ValueError, "top_k"):
+            self.build([("pos", [1, 0]), ("neg", [0, 1])], top_k=0)
+
+    def test_explain_lists_the_nearest_support_sentences_of_each_class(self):
+        classifier = self.build([("pos", [1, 0]), ("pos", [1, 1]), ("pos", [0, 1]), ("neg", [0, 1])])
+        self.embed_as([1, 0.1])
+        explanation = classifier.explain("t", n=2)
+        self.assertEqual([review for _, review in explanation["pos"]], ["pos-0", "pos-1"])
+        self.assertEqual([review for _, review in explanation["neg"]], ["neg-3"])
+        self.assertGreater(explanation["pos"][0][0], explanation["pos"][1][0])
+        self.assertAlmostEqual(explanation["pos"][0][0], classifier.scores("t")["pos"])
 
     def test_embeds_the_text_with_the_configured_model(self):
         classifier = self.build([("pos", [1, 0]), ("neg", [0, 1])])
