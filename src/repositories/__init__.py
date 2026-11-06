@@ -1,2 +1,3 @@
 from .typesafe_repository import TypesafeRepository
 from .openai_repository import OpenAIRepository
+from .openai_embedding_repository import OpenAIEmbeddingRepository

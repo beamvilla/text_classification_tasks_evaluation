@@ -1,17 +1,16 @@
 import logging
 
-from openai import OpenAI
 from openai.types.responses import ParsedResponse
 from pydantic import BaseModel
 from typing import List, Type, TypeVar, Literal
 
 from src.config.model_config import load_models
+from src.repositories.openai_base import DEFAULT_MAX_RETRIES, OpenAIBaseRepository
 
 
 logger = logging.getLogger(__name__)
 
 MODELS = load_models("openai")
-DEFAULT_MAX_RETRIES = 3
 
 ParsedOutputT = TypeVar("ParsedOutputT", bound=BaseModel)
 
@@ -23,12 +22,7 @@ class Message(BaseModel):
     content: str
 
 
-class OpenAIRepository:
-    def __init__(self, max_retries: int = DEFAULT_MAX_RETRIES):
-        # Reads OPENAI_API_KEY. The SDK retries connection errors, timeouts, 408, 409, 429 and 5xx
-        # with exponential backoff (honouring Retry-After); 0 disables retrying.
-        self.__client = OpenAI(max_retries=max_retries)
-
+class OpenAIRepository(OpenAIBaseRepository):
     def send_request(
         self,
         messages: List[Message],
@@ -61,7 +55,7 @@ class OpenAIRepository:
             if temperature is not None:
                 params["temperature"] = temperature
 
-        response = self.__client.responses.parse(
+        response = self._client.responses.parse(
             model=model,
             input=[m.model_dump() for m in messages],
             text_format=text_format,
