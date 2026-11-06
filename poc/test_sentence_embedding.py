@@ -5,7 +5,7 @@ from typing import List
 
 
 client = OpenAI(base_url="http://localhost:8080/v1", api_key= "-")
-EMBEDDING_MODEL_NAME =  "text-embeddings-inference"
+EMBEDDING_MODEL_NAME =  "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 
 
 def get_embedding(text: str) -> List[float]:
