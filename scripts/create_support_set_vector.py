@@ -1,10 +1,10 @@
 """Embed the support sets in data/ with an OpenAI-compatible embedding server, concurrently.
 
 Run from the project root (it reads ./config/models.toml through src):
-    python scripts/create_support_set_vector.py
-    python scripts/create_support_set_vector.py --workers 16
-    python scripts/create_support_set_vector.py --benchmark          # compare worker counts, saves nothing
-    python scripts/create_support_set_vector.py --config other.yaml  # read `embedding` from another config file
+    uv run scripts/create_support_set_vector.py
+    uv run scripts/create_support_set_vector.py --workers 16
+    uv run scripts/create_support_set_vector.py --benchmark          # compare worker counts, saves nothing
+    uv run scripts/create_support_set_vector.py --config other.yaml  # read `embedding` from another config file
 
 The embedding server and model come from the top-level `embedding` section of config/config.yaml.
 The API key is EMBEDDING_API_KEY from .env (optional for a local server).

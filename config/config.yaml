@@ -14,7 +14,7 @@ output_dir: results          # each evaluation writes to results/<timestamp>/
 # vectors) and by every `few_shot` run below, which must use the model that made its support vectors.
 embedding:
   base_url: http://localhost:8080/v1   # any OpenAI-compatible server, e.g. text-embeddings-inference
-  model: sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+  model: BAAI/bge-m3
 
 usecases:
   intent:
