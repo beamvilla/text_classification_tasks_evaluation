@@ -210,7 +210,7 @@ The few-shot classifier embeds a text and compares it with a small synthetic sup
 
 #### How to read these numbers:
 
-- **Speed and cost are not compared with the GPT and typesafe runs.** The few-shot classifier runs on your own embedding server, so its inference time depends on the machine and model it is deployed on, and there is no per-token price. The mean time per sample in `summary.csv` is only for that machine.
+- **Speed and cost are not compared with the GPT and typesafe runs.** The few-shot classifier runs on your own embedding server, so its inference time depends on the machine and model it is deployed on, and there is no per-token price. The inference times in the reports (`mean_inference_time_s` in `summary.csv`) were measured on a Mac M4, and the speed will depend on the machine (and GPU) the classifier is deployed on.
 - **The result depends on the support set.** Its size, wording and class balance change the scores, so a different support set can give different numbers. This is also why the comparison above covers accuracy only.
 - **One run per configuration**, as in the sections above, so run-to-run variation is not measured.
 
