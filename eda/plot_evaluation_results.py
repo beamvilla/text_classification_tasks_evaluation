@@ -28,6 +28,9 @@ BG, INK = "#FFF3E4", "#3A1F1D"
 RED, YELLOW = "#E63946", "#FFC43D"
 PROVIDER_COLORS = {"openai": YELLOW, "typesafe": RED}
 PROVIDER_NAMES = {"openai": "OpenAI", "typesafe": "typesafe"}
+# Not compared here: a few_shot run's speed depends on the machine its embedding server runs on
+# (and it has no token counts or prices), so it cannot be ranked against the hosted APIs.
+EXCLUDED_PROVIDERS = {"few_shot"}
 USECASE_TITLES = {"intent": "Intent", "sentiment": "Sentiment"}
 plt.rcParams.update({"font.family": "DejaVu Sans", "text.color": INK,
                      "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK})
@@ -36,7 +39,7 @@ plt.rcParams.update({"font.family": "DejaVu Sans", "text.color": INK,
 # ---------------------------------------------------------------- data
 def load_rows(results_dir: Path) -> list[dict]:
     with open(results_dir / "summary.csv", encoding="utf-8-sig", newline="") as f:
-        rows = list(csv.DictReader(f))
+        rows = [r for r in csv.DictReader(f) if r["provider"] not in EXCLUDED_PROVIDERS]
     for r in rows:
         for key in ("accuracy", "macro_precision", "macro_recall", "mean_inference_time_s"):
             r[key] = float(r[key])
@@ -46,6 +49,14 @@ def load_rows(results_dir: Path) -> list[dict]:
         r["setting"] = setting(r)
         r["label"] = f"{r['model']} · {r['setting']}"
     return rows
+
+
+def latest_comparable_results_dir() -> Path:
+    """The newest folder in evaluated_results/ that has at least one run this script compares."""
+    for results_dir in sorted((p for p in RESULTS_ROOT.iterdir() if (p / "summary.csv").exists()), reverse=True):
+        if load_rows(results_dir):
+            return results_dir
+    raise SystemExit(f"No folder in {RESULTS_ROOT} has a run to compare (few_shot runs are excluded)")
 
 
 def setting(r: dict) -> str:
@@ -261,7 +272,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         results_dir = Path(sys.argv[1]).resolve()
     else:
-        results_dir = sorted(p for p in RESULTS_ROOT.iterdir() if (p / "summary.csv").exists())[-1]
+        results_dir = latest_comparable_results_dir()
     rows = load_rows(results_dir)
     pricing = load_pricing()
     add_costs(rows, pricing)
