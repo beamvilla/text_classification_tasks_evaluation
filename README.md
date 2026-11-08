@@ -180,6 +180,40 @@ OpenAI bills reasoning tokens as output tokens, and they are already counted in 
 - **Token counts are not comparable across providers, so compare cost instead.** For OpenAI, reasoning tokens are included in the output tokens. typesafe builds its own prompt on the server, reports no reasoning tokens, and its token counts are defined by its service. The cost tables apply each provider's own price to its own reported tokens.
 - **The labels are a reference, not ground truth.** The intent labels were first assigned by a language model and then reviewed by one person (see [Annotation Methodology](#annotation-methodology)), and the sentiment dataset is easy for the models tested.
 
+### Few-shot (embedding) classifier
+
+The few-shot classifier embeds a text and compares it with a small synthetic support set. A class scores the mean cosine similarity of its `top_k` most similar support vectors, and the text gets the class with the highest score. The support sets are [`data/support_set_intent.csv`](data/support_set_intent.csv) (250 samples, 35 to 40 per class) and [`data/support_set_sentiment.csv`](data/support_set_sentiment.csv) (60 samples, 30 per class). They are written so that they do not copy or closely resemble any test sentence. The vectors are made by [`scripts/create_support_set_vector.py`](scripts/create_support_set_vector.py), and the embedding model and `top_k` are set in [`config/config.yaml`](config/config.yaml). The per-run outputs are in `results/` (the `few_shot` rows of each `summary.csv`).
+
+**Intent** (140 samples)
+
+| Embedding model | `top_k` | Accuracy | Macro precision | Macro recall |
+|---|---|---|---|---|
+| `BAAI/bge-m3` | 1 | 90.0% | 91.0% | 90.0% |
+| `BAAI/bge-m3` | 3 | 95.0% | 95.4% | 95.0% |
+| `BAAI/bge-m3` | 5 | 95.0% | 95.4% | 95.0% |
+| `paraphrase-multilingual-mpnet-base-v2` | 3 | 85.7% | 87.7% | 85.7% |
+| `paraphrase-multilingual-mpnet-base-v2` | 5 | 87.1% | 89.0% | 87.1% |
+
+**Sentiment** (128 samples)
+
+| Embedding model | `top_k` | Accuracy | Macro precision | Macro recall |
+|---|---|---|---|---|
+| `BAAI/bge-m3` | 1, 3, 5 | 100.0% | 100.0% | 100.0% |
+| `paraphrase-multilingual-mpnet-base-v2` | 3, 5 | 100.0% | 100.0% | 100.0% |
+
+#### What the results show:
+
+- **The embedding model matters more than `top_k`.** On intent, `bge-m3` reaches 95.0% with `top_k` 3 or 5, while `paraphrase-multilingual-mpnet-base-v2` reaches 85.7% to 87.1%.
+- **`top_k` 1 is less stable.** With `bge-m3`, going from `top_k` 1 to 3 moves intent accuracy from 90.0% to 95.0% (7 more samples correct), because one unrepresentative support sample no longer decides the class. Going to 5 changes nothing.
+- **Sentiment does not separate the settings.** Every configuration scores 100%, as the other classifiers do.
+- **On accuracy, `bge-m3` (`top_k` 3) is in the same group as the GPT and typesafe runs.** It scores 95.0%, against 95.0% for `gpt-4.1-mini` and 95.7% for `jev-latest` and `gpt-5-mini` (reasoning_effort: medium). With 140 samples, 1 sample is 0.7 percentage points, so these gaps are not meaningful.
+
+#### How to read these numbers:
+
+- **Speed and cost are not compared with the GPT and typesafe runs.** The few-shot classifier runs on your own embedding server, so its inference time depends on the machine and model it is deployed on, and there is no per-token price. The mean time per sample in `summary.csv` is only for that machine.
+- **The result depends on the support set.** Its size, wording and class balance change the scores, so a different support set can give different numbers. This is also why the comparison above covers accuracy only.
+- **One run per configuration**, as in the sections above, so run-to-run variation is not measured.
+
 ## Limitations
 
 - The source data consists of post-purchase product reviews rather than customer service requests, so it differs in distribution from the intent task.
