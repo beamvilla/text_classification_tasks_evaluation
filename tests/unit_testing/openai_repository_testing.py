@@ -18,7 +18,7 @@ REASONING = "gpt-5-mini"
 
 class SendRequestTest(unittest.TestCase):
     def setUp(self):
-        patcher = patch("src.repositories.openai_repository.OpenAI")
+        patcher = patch("src.repositories.openai_base.OpenAI")
         self.openai_class = patcher.start()
         self.client = self.openai_class.return_value
         self.addCleanup(patcher.stop)

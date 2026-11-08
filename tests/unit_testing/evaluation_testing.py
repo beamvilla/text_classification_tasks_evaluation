@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.config.config import DatasetConfig, EvalConfig, OpenAIRunConfig, TypesafeRunConfig
+from src.config.config import PROJECT_ROOT, DatasetConfig, EvalConfig, FewShotRunConfig, OpenAIRunConfig, TypesafeRunConfig
 from src.evaluation import factory
 from src.evaluation.metrics import accuracy, macro_precision, macro_recall
 from src.evaluation.runner import (
@@ -208,6 +208,18 @@ class BuildClassifierTest(unittest.TestCase):
             factory.build_classifier(TypesafeRunConfig(provider="typesafe", max_retries=1))
         repo_class.assert_called_once_with(max_retries=1)
         self.assertEqual(classifier_class.call_args.kwargs["model"], "jev-latest")
+
+    def test_few_shot_run_builds_few_shot_classifier(self):
+        run = FewShotRunConfig.model_construct(provider="few_shot", model="m", base_url="http://e/v1",
+                                               support_set=Path("data/s.json"), top_k=3, max_retries=2)
+        with patch.object(factory, "OpenAIEmbeddingRepository") as repo_class, \
+             patch.object(factory, "FewShotLearningClassifier") as classifier_class, \
+             patch.dict("os.environ", {"EMBEDDING_API_KEY": "secret"}):
+            factory.build_classifier(run)
+        repo_class.assert_called_once_with(max_retries=2, base_url="http://e/v1", api_key="secret")
+        kwargs = classifier_class.call_args.kwargs
+        self.assertEqual((kwargs["embedding_model"], kwargs["top_k"]), ("m", 3))
+        self.assertEqual(kwargs["support_set_path"], PROJECT_ROOT / "data/s.json")
 
 
 if __name__ == "__main__":

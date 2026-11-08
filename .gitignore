@@ -222,3 +222,4 @@ __marimo__/
 *.whl
 # Evaluation outputs
 results/
+**/data/support_set_vectors

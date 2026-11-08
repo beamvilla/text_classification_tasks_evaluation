@@ -1,2 +1,3 @@
 from .openai_classifier import OpenAIClassifier
 from .typesafe_classifier import TypesafeClassifier
+from .few_shot_learning_classifier import FewShotLearningClassifier
