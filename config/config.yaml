@@ -27,13 +27,13 @@ usecases:
       seed: 42               # makes the subset identical for every run
     runs:
       - provider: openai
-        model: gpt-5.6-luna
+        model: gpt-6-luna
         reasoning_effort: none
       - provider: openai
-        model: gpt-5.6-luna
+        model: gpt-6-luna
         reasoning_effort: low
       - provider: openai
-        model: gpt-5.6-luna
+        model: gpt-6-luna
         reasoning_effort: medium
       # - provider: typesafe
       #   model: jev-latest
@@ -54,13 +54,13 @@ usecases:
       #   model: gpt-4.1-mini
       #   temperature: 0
       - provider: openai
-        model: gpt-5.6-luna
+        model: gpt-6-luna
         reasoning_effort: none
       - provider: openai
-        model: gpt-5.6-luna
+        model: gpt-6-luna
         reasoning_effort: low
       - provider: openai
-        model: gpt-5.6-luna
+        model: gpt-6-luna
         reasoning_effort: medium
       # - provider: typesafe
       #   model: jev-latest

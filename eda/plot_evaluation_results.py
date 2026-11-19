@@ -74,10 +74,10 @@ def by_usecase(rows: list[dict], usecase: str) -> list[dict]:
 # (in points) around its dot; the layout with the fewest collisions wins (labels on labels or dots, outside the
 # panel, leader lines through other dots or labels), preferring labels close to their dot. Labels further away
 # than the first ring get a thin leader line back to their dot.
-MARKER_SIZE = 180
-LABEL_FONTSIZE = 9
-NEAR_OFFSETS = [(0, 12), (0, -12), (11, 0), (-11, 0), (9, 9), (-9, 9), (9, -9), (-9, -9)]
-FAR_OFFSETS = [(dx, s * d) for d in (36, 60, 84, 108, 132) for s in (1, -1) for dx in (0, -40, 40)]
+MARKER_SIZE = 110
+LABEL_FONTSIZE = 8
+NEAR_OFFSETS = [(0, 8), (0, -8), (8, 0), (-8, 0), (6, 6), (-6, 6), (6, -6), (-6, -6)]
+FAR_OFFSETS = [(dx, s * d) for d in (26, 44, 62, 80, 98, 116) for s in (1, -1) for dx in (0, -30, 30)]
 HEADER_Y = 0.765  # labels may rise above a panel up to here (figure fraction), just under the panel title
 
 
@@ -86,18 +86,12 @@ def _crosses(segment, box: Bbox) -> bool:
     return any(box.contains(x0 + (x1 - x0) * t / 24, y0 + (y1 - y0) * t / 24) for t in range(25))
 
 
-def _distance(box: Bbox, x: float, y: float) -> float:
-    dx = max(box.x0 - x, 0, x - box.x1)
-    dy = max(box.y0 - y, 0, y - box.y1)
-    return (dx * dx + dy * dy) ** 0.5
-
-
 def place_labels(ax, points: list[tuple[float, float, str]]) -> None:
     fig = ax.figure
     renderer = fig.canvas.get_renderer()
     panel = ax.get_window_extent(renderer)
     top = fig.transFigure.transform((0, HEADER_Y))[1]
-    pad = 3  # px of air around every label
+    pad = 2  # px of air around every label
     radius = MARKER_SIZE ** 0.5 / 2 / 72 * fig.dpi
     centres = ax.transData.transform([(x, y) for x, y, _ in points])
     dots = [Bbox.from_extents(px - radius, py - radius, px + radius, py + radius) for px, py in centres]
@@ -127,10 +121,13 @@ def place_labels(ax, points: list[tuple[float, float, str]]) -> None:
             if not (panel.x0 <= box.x0 and box.x1 <= panel.x1 and panel.y0 <= box.y0 and box.y1 <= top):
                 cost += 1e6
             cost += 1e4 * sum(box.overlaps(d) for d in dots)
-            # a label without a leader line must sit closer to its own dot than to any other, or it reads as theirs
+            # a label without a leader line must have its own dot closer to its centre than any other dot,
+            # or it reads as belonging to that other dot
             if not far:
-                own = _distance(box, px, py)
-                cost += 1e3 * sum(_distance(box, qx, qy) < own + 2 for j, (qx, qy) in enumerate(centres) if j != i)
+                cx, cy = (box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2
+                own = ((cx - px) ** 2 + (cy - py) ** 2) ** 0.5
+                cost += 1e3 * sum(((cx - qx) ** 2 + (cy - qy) ** 2) ** 0.5 < own
+                                  for j, (qx, qy) in enumerate(centres) if j != i)
             if far:
                 cost += 1e3 * sum(_crosses(segment, d) for j, d in enumerate(dots) if j != i)
             mine.append(((dx, dy), box, segment, cost))
@@ -190,14 +187,15 @@ def plot_accuracy_vs_time(rows: list[dict], path: Path) -> None:
         ax.set_ylim(0.83, 1.05)
         ax.set_yticks([0.85, 0.90, 0.95, 1.00])
         ax.set_yticklabels(["85%", "90%", "95%", "100%"], fontsize=12, fontweight="bold")
-        ax.set_xticks([0, 1, 2, 3])
-        ax.set_xticklabels(["0 s", "1 s", "2 s", "3 s"], fontsize=12, fontweight="bold")
+        seconds = range(int(xmax) + 1)  # one tick per whole second that fits, however slow the slowest run
+        ax.set_xticks(list(seconds))
+        ax.set_xticklabels([f"{t} s" for t in seconds], fontsize=12, fontweight="bold")
         ax.set_axisbelow(True)
         ax.grid(axis="y", color=INK, alpha=0.12, linewidth=1)
         ax.axhline(0.83, color=INK, linewidth=2, zorder=2)
         for r in data:
             ax.scatter([r["mean_inference_time_s"]], [r["accuracy"]], s=MARKER_SIZE,
-                       color=PROVIDER_COLORS[r["provider"]], edgecolors=INK, linewidths=1.6, zorder=3)
+                       color=PROVIDER_COLORS[r["provider"]], edgecolors=INK, linewidths=1.3, zorder=3)
         place_labels(ax, [(r["mean_inference_time_s"], r["accuracy"], f"{r['model']}\n{r['setting']}")
                           for r in data])
 
@@ -225,12 +223,25 @@ def plot_accuracy_vs_time(rows: list[dict], path: Path) -> None:
 # ---------------------------------------------------------------- chart: cost
 def plot_cost(rows: list[dict], path: Path) -> None:
     """Total cost of one evaluation run per model, one panel per usecase, same x scale in both."""
-    W, H = 13, 6.8
+    n = len(by_usecase(rows, "intent"))
+    # The figure grows with the number of bars so every two-line model label keeps 0.5 in of room. The header and
+    # footer keep their size in inches; top() and bottom() turn a position on the 6.8 in tall design into a
+    # figure fraction measured from the top or the bottom edge.
+    W, BASE_H = 13, 6.8
+    panel_h = max(0.60 * BASE_H, 0.5 * (n + 0.2))
+    H = BASE_H - 0.60 * BASE_H + panel_h
+
+    def top(y: float) -> float:
+        return 1 - (1 - y) * BASE_H / H
+
+    def bottom(y: float) -> float:
+        return y * BASE_H / H
+
     fig = plt.figure(figsize=(W, H), facecolor=BG)
     width = 0.34
-    layout = {"intent": [0.16, 0.12, width, 0.60], "sentiment": [0.58, 0.12, width, 0.60]}
+    layout = {"intent": [0.16, bottom(0.12), width, panel_h / H],
+              "sentiment": [0.58, bottom(0.12), width, panel_h / H]}
     xmax = max(r["total_cost"] for r in rows) * 1.7
-    n = len(by_usecase(rows, "intent"))
 
     for usecase, box in layout.items():
         ax = fig.add_axes(box)
@@ -263,17 +274,18 @@ def plot_cost(rows: list[dict], path: Path) -> None:
                                linespacing=1.25)
         else:
             ax.set_yticks([])
-        fig.text(box[0], 0.78, f"{usecase.upper()}  n={data[0]['samples']}", fontsize=13, fontweight="bold")
+        fig.text(box[0], top(0.78), f"{usecase.upper()}  n={data[0]['samples']}", fontsize=13, fontweight="bold")
 
-    fig.text(0.54, 0.04, "Total cost of one evaluation run (USD); (Nx) = times the jev-latest cost",
+    fig.text(0.54, bottom(0.04), "Total cost of one evaluation run (USD); (Nx) = times the jev-latest cost",
              fontsize=13, fontweight="bold", ha="center")
     for j, provider in enumerate(dict.fromkeys(r["provider"] for r in rows)):
         x = 0.68 + j * 0.13
-        fig.patches.append(FancyBboxPatch((x, 0.895), 0.022, 0.035, transform=fig.transFigure,
-                           boxstyle="round,pad=0,rounding_size=0.008", fc=PROVIDER_COLORS[provider], ec=INK, lw=2))
-        fig.text(x + 0.03, 0.912, PROVIDER_NAMES[provider], va="center", fontsize=13, fontweight="bold")
-    fig.text(0.06, 0.92, "Cost Benchmark", fontsize=28, fontweight="bold", color=RED)
-    fig.text(0.06, 0.86, "Same samples and prompts for every model: lower is cheaper", fontsize=13)
+        fig.patches.append(FancyBboxPatch((x, top(0.895)), 0.022, 0.035 * BASE_H / H, transform=fig.transFigure,
+                           boxstyle="round,pad=0,rounding_size=0.008", mutation_aspect=H / W,
+                           fc=PROVIDER_COLORS[provider], ec=INK, lw=2))
+        fig.text(x + 0.03, top(0.912), PROVIDER_NAMES[provider], va="center", fontsize=13, fontweight="bold")
+    fig.text(0.06, top(0.92), "Cost Benchmark", fontsize=28, fontweight="bold", color=RED)
+    fig.text(0.06, top(0.86), "Same samples and prompts for every model: lower is cheaper", fontsize=13)
     fig.savefig(path, dpi=150, facecolor=BG)
     plt.close(fig)
 
