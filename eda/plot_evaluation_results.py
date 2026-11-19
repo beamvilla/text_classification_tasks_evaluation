@@ -1,13 +1,17 @@
-"""Plot the evaluation results in evaluated_results/<run>/summary.csv for the README.
+"""Plot the evaluation results in evaluated_results/all/summary.csv for the README.
 
 Usage (from the repository root):
     uv run --with matplotlib eda/plot_evaluation_results.py [evaluated_results/<run>]
+
+With no argument it reads evaluated_results/all/ (every run gathered in one summary.csv);
+pass another folder to plot that one instead.
 
 Writes assets/evaluation_accuracy_vs_time.png and assets/evaluation_cost.png (same look as
 plot_class_distribution.py) and prints
 the markdown tables used in README.md (accuracy / time / tokens, and cost from config/pricing.yaml).
 """
 import csv
+import random
 import sys
 from pathlib import Path
 
@@ -16,9 +20,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, Rectangle
+from matplotlib.transforms import Bbox
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_ROOT = ROOT / "evaluated_results"
+DEFAULT_RESULTS_DIR = RESULTS_ROOT / "all"  # every run gathered in one summary.csv
 ASSETS = ROOT / "assets"
 PRICING_PATH = ROOT / "config" / "pricing.yaml"
 BASELINE = ("typesafe", "jev-latest")  # the run every other cost is compared with
@@ -51,14 +57,6 @@ def load_rows(results_dir: Path) -> list[dict]:
     return rows
 
 
-def latest_comparable_results_dir() -> Path:
-    """The newest folder in evaluated_results/ that has at least one run this script compares."""
-    for results_dir in sorted((p for p in RESULTS_ROOT.iterdir() if (p / "summary.csv").exists()), reverse=True):
-        if load_rows(results_dir):
-            return results_dir
-    raise SystemExit(f"No folder in {RESULTS_ROOT} has a run to compare (few_shot runs are excluded)")
-
-
 def setting(r: dict) -> str:
     if r["reasoning_effort"]:
         return r["reasoning_effort"]
@@ -72,13 +70,105 @@ def by_usecase(rows: list[dict], usecase: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------- chart: accuracy vs time
-# Which side of its point each label goes, so labels of close points never collide.
-LABEL_SIDE = {
-    "intent": {"gpt-4.1-mini · temperature 0": -1, "gpt-5-mini · minimal": -1, "gpt-5-mini · medium": 1,
-               "gpt-5 · medium": 1, "jev-latest · typesafe": 1},
-    "sentiment": {"gpt-4.1-mini · temperature 0": -1, "gpt-5-mini · minimal": 1, "gpt-5-mini · medium": -1,
-                  "gpt-5 · medium": 1, "jev-latest · typesafe": 1},
-}
+# Labels are placed automatically, so new runs need no manual layout. Each label has a set of candidate offsets
+# (in points) around its dot; the layout with the fewest collisions wins (labels on labels or dots, outside the
+# panel, leader lines through other dots or labels), preferring labels close to their dot. Labels further away
+# than the first ring get a thin leader line back to their dot.
+MARKER_SIZE = 180
+LABEL_FONTSIZE = 9
+NEAR_OFFSETS = [(0, 12), (0, -12), (11, 0), (-11, 0), (9, 9), (-9, 9), (9, -9), (-9, -9)]
+FAR_OFFSETS = [(dx, s * d) for d in (36, 60, 84, 108, 132) for s in (1, -1) for dx in (0, -40, 40)]
+HEADER_Y = 0.765  # labels may rise above a panel up to here (figure fraction), just under the panel title
+
+
+def _crosses(segment, box: Bbox) -> bool:
+    (x0, y0), (x1, y1) = segment
+    return any(box.contains(x0 + (x1 - x0) * t / 24, y0 + (y1 - y0) * t / 24) for t in range(25))
+
+
+def _distance(box: Bbox, x: float, y: float) -> float:
+    dx = max(box.x0 - x, 0, x - box.x1)
+    dy = max(box.y0 - y, 0, y - box.y1)
+    return (dx * dx + dy * dy) ** 0.5
+
+
+def place_labels(ax, points: list[tuple[float, float, str]]) -> None:
+    fig = ax.figure
+    renderer = fig.canvas.get_renderer()
+    panel = ax.get_window_extent(renderer)
+    top = fig.transFigure.transform((0, HEADER_Y))[1]
+    pad = 3  # px of air around every label
+    radius = MARKER_SIZE ** 0.5 / 2 / 72 * fig.dpi
+    centres = ax.transData.transform([(x, y) for x, y, _ in points])
+    dots = [Bbox.from_extents(px - radius, py - radius, px + radius, py + radius) for px, py in centres]
+    style = dict(textcoords="offset points", fontsize=LABEL_FONTSIZE, fontweight="bold", linespacing=1.25,
+                 annotation_clip=False, zorder=4)
+
+    def label(i, dx, dy, leader=False):
+        x, y, text = points[i]
+        ha = "center" if dx == 0 else ("left" if dx > 0 else "right")
+        va = "center" if dy == 0 else ("bottom" if dy > 0 else "top")
+        extra = dict(arrowprops=dict(arrowstyle="-", color=INK, lw=1, alpha=0.6, shrinkA=2,
+                                     shrinkB=radius * 72 / fig.dpi + 1)) if leader else {}
+        return ax.annotate(text, (x, y), xytext=(dx, dy), ha=ha, va=va, **style, **extra)
+
+    # every candidate of every label: (offset, box, leader segment or None, cost on its own)
+    options = []
+    for i, (px, py) in enumerate(centres):
+        mine = []
+        for rank, (dx, dy) in enumerate(NEAR_OFFSETS + FAR_OFFSETS):
+            ann = label(i, dx, dy)
+            b = ann.get_window_extent(renderer)
+            ann.remove()
+            box = Bbox.from_extents(b.x0 - pad, b.y0 - pad, b.x1 + pad, b.y1 + pad)
+            far = (dx, dy) in FAR_OFFSETS
+            segment = ((min(max(px, box.x0), box.x1), min(max(py, box.y0), box.y1)), (px, py)) if far else None
+            cost = rank * 0.1 + (abs(dx) + abs(dy)) * (1.0 if far else 0.2)
+            if not (panel.x0 <= box.x0 and box.x1 <= panel.x1 and panel.y0 <= box.y0 and box.y1 <= top):
+                cost += 1e6
+            cost += 1e4 * sum(box.overlaps(d) for d in dots)
+            # a label without a leader line must sit closer to its own dot than to any other, or it reads as theirs
+            if not far:
+                own = _distance(box, px, py)
+                cost += 1e3 * sum(_distance(box, qx, qy) < own + 2 for j, (qx, qy) in enumerate(centres) if j != i)
+            if far:
+                cost += 1e3 * sum(_crosses(segment, d) for j, d in enumerate(dots) if j != i)
+            mine.append(((dx, dy), box, segment, cost))
+        options.append(mine)
+
+    def pair_cost(a, b) -> float:
+        cost = 1e4 if a[1].overlaps(b[1]) else 0.0
+        for one, other in ((a, b), (b, a)):
+            if one[2] is not None and _crosses(one[2], other[1]):
+                cost += 1e3
+        return cost
+
+    def improve(choice: list[int]) -> list[int]:
+        for _ in range(30):  # one label at a time takes its best candidate, until nothing changes
+            changed = False
+            for i in range(len(points)):
+                def total(k):
+                    return options[i][k][3] + sum(pair_cost(options[i][k], options[j][choice[j]])
+                                                  for j in range(len(points)) if j != i)
+                best = min(range(len(options[i])), key=total)
+                if total(best) < total(choice[i]) - 1e-9:
+                    choice[i], changed = best, True
+            if not changed:
+                break
+        return choice
+
+    def layout_cost(choice: list[int]) -> float:
+        n = len(points)
+        return (sum(options[i][choice[i]][3] for i in range(n))
+                + sum(pair_cost(options[i][choice[i]], options[j][choice[j]]) for i in range(n) for j in range(i + 1, n)))
+
+    rng = random.Random(0)  # fixed seed: the same results always give the same chart
+    starts = [[min(range(len(o)), key=lambda k: o[k][3]) for o in options]]
+    starts += [[rng.randrange(len(o)) for o in options] for _ in range(40)]
+    best = min((improve(c) for c in starts), key=layout_cost)
+    for i, k in enumerate(best):
+        (dx, dy), _, segment, _ = options[i][k]
+        label(i, dx, dy, leader=segment is not None)
 
 
 def plot_accuracy_vs_time(rows: list[dict], path: Path) -> None:
@@ -106,13 +196,10 @@ def plot_accuracy_vs_time(rows: list[dict], path: Path) -> None:
         ax.grid(axis="y", color=INK, alpha=0.12, linewidth=1)
         ax.axhline(0.83, color=INK, linewidth=2, zorder=2)
         for r in data:
-            x, y = r["mean_inference_time_s"], r["accuracy"]
-            ax.scatter([x], [y], s=330, color=PROVIDER_COLORS[r["provider"]], edgecolors=INK,
-                       linewidths=2, zorder=3)
-            side = LABEL_SIDE[usecase][r["label"]]
-            ax.annotate(f"{r['model']}\n{r['setting']}", (x, y), xytext=(0, 17 * side),
-                        textcoords="offset points", ha="center", va="bottom" if side > 0 else "top",
-                        fontsize=10.5, fontweight="bold", linespacing=1.25)
+            ax.scatter([r["mean_inference_time_s"]], [r["accuracy"]], s=MARKER_SIZE,
+                       color=PROVIDER_COLORS[r["provider"]], edgecolors=INK, linewidths=1.6, zorder=3)
+        place_labels(ax, [(r["mean_inference_time_s"], r["accuracy"], f"{r['model']}\n{r['setting']}")
+                          for r in data])
 
     n = {u: by_usecase(rows, u)[0]["samples"] for u in panels}
     perfect = all(r["accuracy"] == 1 for r in by_usecase(rows, "sentiment"))
@@ -272,7 +359,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         results_dir = Path(sys.argv[1]).resolve()
     else:
-        results_dir = latest_comparable_results_dir()
+        results_dir = DEFAULT_RESULTS_DIR
     rows = load_rows(results_dir)
     pricing = load_pricing()
     add_costs(rows, pricing)

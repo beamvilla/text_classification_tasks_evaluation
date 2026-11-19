@@ -26,24 +26,20 @@ usecases:
       max_samples: null      # null = all rows; a number evaluates a random subset (cheaper)
       seed: 42               # makes the subset identical for every run
     runs:
-      # - provider: openai
-      #   model: gpt-4.1-mini
-      #   temperature: 0       # regular models only; ignored (with a warning) for reasoning models
-      #   max_retries: 3
-      # - provider: openai
-      #   model: gpt-5-mini
-      #   reasoning_effort: minimal   # reasoning models only; ignored for regular models
-      # - provider: openai
-      #   model: gpt-5-mini
-      #   reasoning_effort: medium
-      # - provider: openai
-      #   model: gpt-5
-      #   reasoning_effort: medium
+      - provider: openai
+        model: gpt-5.6-luna
+        reasoning_effort: none
+      - provider: openai
+        model: gpt-5.6-luna
+        reasoning_effort: low
+      - provider: openai
+        model: gpt-5.6-luna
+        reasoning_effort: medium
       # - provider: typesafe
       #   model: jev-latest
-      - provider: few_shot       # needs the embedding server; model and base_url come from `embedding` above
-        support_set: data/support_set_vectors/support_set_intent.json
-        top_k: 1                 # a class scores the mean of its top_k most similar support vectors
+      # - provider: few_shot       # needs the embedding server; model and base_url come from `embedding` above
+      #   support_set: data/support_set_vectors/support_set_intent.json
+      #   top_k: 1                 # a class scores the mean of its top_k most similar support vectors
 
   sentiment:
     dataset:
@@ -57,17 +53,17 @@ usecases:
       # - provider: openai
       #   model: gpt-4.1-mini
       #   temperature: 0
-      # - provider: openai
-      #   model: gpt-5-mini
-      #   reasoning_effort: minimal
-      # - provider: openai
-      #   model: gpt-5-mini
-      #   reasoning_effort: medium
-      # - provider: openai
-      #   model: gpt-5
-      #   reasoning_effort: medium
+      - provider: openai
+        model: gpt-5.6-luna
+        reasoning_effort: none
+      - provider: openai
+        model: gpt-5.6-luna
+        reasoning_effort: low
+      - provider: openai
+        model: gpt-5.6-luna
+        reasoning_effort: medium
       # - provider: typesafe
       #   model: jev-latest
-      - provider: few_shot
-        support_set: data/support_set_vectors/support_set_sentiment.json
-        top_k: 1
+      # - provider: few_shot
+      #   support_set: data/support_set_vectors/support_set_sentiment.json
+      #   top_k: 1
